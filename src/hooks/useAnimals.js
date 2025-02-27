@@ -31,14 +31,18 @@ export const useAnimals = ({ category = 'all', searchText = '' }) => {
       if (category !== 'all') {
         // Convert category to appropriate species filter
         const speciesMap = {
-          cat: 'cat',
-          dog: 'dog',
-          bird: 'bird',
-          // Add other mappings as needed
+          cat: 'Cat',
+          dog: 'Dog',
+          bird: 'Bird',
+          other: 'Hamster'
         };
+        
         const species = speciesMap[category];
         if (species) {
           query = query.eq('species', species);
+        } else if (category === 'other') {
+          // For 'other' category, get all species not in the main categories
+          query = query.not('species', 'in', ['Cat', 'Dog', 'Bird']);
         }
       }
       

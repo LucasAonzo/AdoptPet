@@ -10,14 +10,14 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
-import supabase from '../../config/supabase';
+import { useAuth } from '../../context/AuthContext';
 
 const SignUpScreen = ({ navigation }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const { signUp, loading } = useAuth();
 
   const handleSignUp = async () => {
     // Validate inputs
@@ -36,41 +36,16 @@ const SignUpScreen = ({ navigation }) => {
       return;
     }
 
-    setLoading(true);
-    try {
-      // Sign up with Supabase
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-      });
+    const userData = {
+      name,
+      email,
+      profile_picture: '',
+      bio: ''
+    };
 
-      if (authError) throw authError;
-
-      // If sign up successful, create user profile
-      if (authData?.user) {
-        const { error: profileError } = await supabase
-          .from('users')
-          .insert([
-            {
-              id: authData.user.id,
-              name,
-              email,
-              created_at: new Date(),
-            },
-          ]);
-
-        if (profileError) throw profileError;
-
-        Alert.alert(
-          'Sign Up Successful',
-          'Please check your email to verify your account.'
-        );
-        navigation.navigate('Login');
-      }
-    } catch (error) {
-      Alert.alert('Error signing up', error.message);
-    } finally {
-      setLoading(false);
+    const success = await signUp(email, password, userData);
+    if (success) {
+      navigation.navigate('Login');
     }
   };
 

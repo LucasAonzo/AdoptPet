@@ -12,11 +12,15 @@
     "setup-db": "node src/utils/initializeDatabase.js",
     "seed-db": "node src/utils/seed.js",
     "demo-queries": "node src/utils/demoQueries.js",
-    "test-connection": "node src/utils/testConnection.js"
+    "test-connection": "node src/utils/testConnection.js",
+    "test-animal-creation": "node src/tests/testAnimalCreation.js",
+    "test-auth-animal-creation": "node src/tests/testAuthenticatedAnimalCreation.js",
+    "test-auth": "node src/tests/testAuthentication.js"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.0.2",
     "@react-native-async-storage/async-storage": "1.23.1",
+    "@react-navigation/bottom-tabs": "^6.6.1",
     "@react-navigation/native": "^6.1.14",
     "@react-navigation/stack": "^6.3.25",
     "@supabase/supabase-js": "^2.49.1",

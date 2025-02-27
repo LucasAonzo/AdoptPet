@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
 import supabase from '../../config/supabase';
+import defaultAvatarBase64 from '../../../assets/defaultAvatar';
 
 const ProfileScreen = ({ navigation }) => {
   const [user, setUser] = useState(null);
@@ -262,7 +263,7 @@ const ProfileScreen = ({ navigation }) => {
                   source={
                     profile?.avatar_url
                       ? { uri: profile.avatar_url }
-                      : require('../../../assets/default-avatar.png')
+                      : { uri: defaultAvatarBase64 }
                   }
                   style={styles.profileImage}
                 />
@@ -276,7 +277,7 @@ const ProfileScreen = ({ navigation }) => {
               source={
                 profile?.avatar_url
                   ? { uri: profile.avatar_url }
-                  : require('../../../assets/default-avatar.png')
+                  : { uri: defaultAvatarBase64 }
               }
               style={styles.profileImage}
             />

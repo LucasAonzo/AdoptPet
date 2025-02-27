@@ -11,12 +11,12 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import supabase from '../../config/supabase';
+import { useAuth } from '../../context/AuthContext';
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const { signIn, loading } = useAuth();
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -24,18 +24,10 @@ const LoginScreen = ({ navigation }) => {
       return;
     }
 
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-    } catch (error) {
-      Alert.alert('Error logging in', error.message);
-    } finally {
-      setLoading(false);
+    const success = await signIn(email, password);
+    if (success) {
+      // The auth context will automatically update and redirect to main app
+      console.log('Login successful!');
     }
   };
 
