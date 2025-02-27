@@ -10,7 +10,9 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const SignUpScreen = ({ navigation }) => {
   const [name, setName] = useState('');
@@ -50,129 +52,218 @@ const SignUpScreen = ({ navigation }) => {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
+    <LinearGradient
+      colors={['#ffffff', '#f8f4ff']}
+      style={styles.gradientContainer}
     >
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <View style={styles.headerContainer}>
-          <Text style={styles.title}>Create Account</Text>
-          <Text style={styles.subtitle}>Join AdoptMe and find your perfect pet</Text>
-        </View>
-
-        <View style={styles.formContainer}>
-          <TextInput
-            style={styles.input}
-            placeholder="Full Name"
-            value={name}
-            onChangeText={setName}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Email"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Confirm Password"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry
-          />
-
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.container}
+      >
+        <ScrollView contentContainerStyle={styles.scrollContainer}>
           <TouchableOpacity
-            style={styles.signUpButton}
-            onPress={handleSignUp}
-            disabled={loading}
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
           >
-            <Text style={styles.signUpButtonText}>
-              {loading ? 'Creating Account...' : 'Sign Up'}
-            </Text>
+            <Ionicons name="arrow-back" size={24} color="#8e74ae" />
           </TouchableOpacity>
-        </View>
+          
+          <View style={styles.headerContainer}>
+            <Text style={styles.title}>Create Account</Text>
+            <Text style={styles.subtitle}>Join AdoptMe and find your perfect pet</Text>
+          </View>
 
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Already have an account?</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-            <Text style={styles.loginText}>Log In</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          <View style={styles.formContainer}>
+            <Text style={styles.inputLabel}>Full Name</Text>
+            <View style={styles.inputWrapper}>
+              <Ionicons name="person-outline" size={20} color="#8e74ae" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Enter your full name"
+                placeholderTextColor="#999"
+                value={name}
+                onChangeText={setName}
+              />
+            </View>
+            
+            <Text style={styles.inputLabel}>Email Address</Text>
+            <View style={styles.inputWrapper}>
+              <Ionicons name="mail-outline" size={20} color="#8e74ae" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Enter your email"
+                placeholderTextColor="#999"
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+              />
+            </View>
+            
+            <Text style={styles.inputLabel}>Password</Text>
+            <View style={styles.inputWrapper}>
+              <Ionicons name="lock-closed-outline" size={20} color="#8e74ae" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Create a password (min. 6 characters)"
+                placeholderTextColor="#999"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+              />
+            </View>
+            
+            <Text style={styles.inputLabel}>Confirm Password</Text>
+            <View style={styles.inputWrapper}>
+              <Ionicons name="shield-checkmark-outline" size={20} color="#8e74ae" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Enter your password again"
+                placeholderTextColor="#999"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry
+              />
+            </View>
+
+            <TouchableOpacity
+              onPress={handleSignUp}
+              disabled={loading}
+            >
+              <LinearGradient
+                colors={['#a58fd8', '#8e74ae', '#7d5da7']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.signUpButton}
+              >
+                <Text style={styles.signUpButtonText}>
+                  {loading ? 'Creating Account...' : 'Sign Up'}
+                </Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Already have an account?</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+              <Text style={styles.loginText}>Log In</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
+  gradientContainer: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   scrollContainer: {
     flexGrow: 1,
+    padding: 25,
+  },
+  backButton: {
+    marginTop: 40,
+    marginBottom: 20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(142, 116, 174, 0.1)',
     justifyContent: 'center',
-    padding: 20,
+    alignItems: 'center',
   },
   headerContainer: {
-    alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 30,
   },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: 'bold',
-    color: '#0077B6',
-    marginBottom: 5,
+    color: '#8e74ae',
+    marginBottom: 8,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#555',
-    textAlign: 'center',
+    fontSize: 17,
+    color: '#666',
+    fontWeight: '500',
   },
   formContainer: {
     width: '100%',
     marginBottom: 30,
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 22,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  inputLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#555',
+    marginBottom: 8,
+    marginLeft: 2,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8F6FB',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E8E0FF',
+    marginBottom: 20,
+    shadowColor: '#8e74ae',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  inputIcon: {
+    marginLeft: 15,
+    marginRight: 5,
   },
   input: {
-    backgroundColor: '#F5F5F5',
-    borderRadius: 8,
+    flex: 1,
     padding: 15,
-    marginBottom: 15,
     fontSize: 16,
+    color: '#444',
   },
   signUpButton: {
-    backgroundColor: '#0077B6',
-    borderRadius: 8,
-    padding: 15,
+    borderRadius: 12,
+    padding: 16,
     alignItems: 'center',
     marginTop: 10,
   },
   signUpButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: 'bold',
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: 15,
   },
   footerText: {
-    color: '#555',
-    fontSize: 14,
+    color: '#666',
+    fontSize: 15,
     marginRight: 5,
   },
   loginText: {
-    color: '#0077B6',
-    fontSize: 14,
+    color: '#8e74ae',
+    fontSize: 15,
     fontWeight: 'bold',
   },
 });

@@ -53,7 +53,6 @@ const AnimalDetailScreen = ({ route, navigation }) => {
         .from('animals')
         .update({ 
           is_adopted: true,
-          adopted_by: user.id,
           updated_at: new Date().toISOString()
         })
         .eq('id', displayAnimal.id);

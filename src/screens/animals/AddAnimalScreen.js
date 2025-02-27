@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../context/AuthContext';
 import AnimalService from '../../services/animalService';
 
@@ -91,163 +92,255 @@ const AddAnimalScreen = ({ navigation }) => {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
+    <LinearGradient
+      colors={['#ffffff', '#f8f4ff']}
+      style={styles.gradientContainer}
     >
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Add a New Animal</Text>
-          <Text style={styles.subtitle}>
-            Enter the details of the animal you want to add for adoption
-          </Text>
-        </View>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.container}
+      >
+        <ScrollView 
+          contentContainerStyle={styles.scrollContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.header}>
+            <Text style={styles.title}>Add a New Animal</Text>
+            <Text style={styles.subtitle}>
+              Enter the details of the animal you want to add for adoption
+            </Text>
+          </View>
 
-        <View style={styles.formContainer}>
-          <Text style={styles.label}>Name</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter animal name"
-            value={formData.name}
-            onChangeText={(text) => updateFormField('name', text)}
-          />
+          <View style={styles.formContainer}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Name</Text>
+              <View style={styles.inputWrapper}>
+                <Ionicons name="paw-outline" size={22} color="#8e74ae" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter animal name"
+                  placeholderTextColor="#aaa"
+                  value={formData.name}
+                  onChangeText={(text) => updateFormField('name', text)}
+                />
+              </View>
+            </View>
 
-          <Text style={styles.label}>Species</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="e.g., Dog, Cat, Bird"
-            value={formData.species}
-            onChangeText={(text) => updateFormField('species', text)}
-          />
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Species</Text>
+              <View style={styles.inputWrapper}>
+                <Ionicons name="help-buoy-outline" size={22} color="#8e74ae" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g., Dog, Cat, Bird"
+                  placeholderTextColor="#aaa"
+                  value={formData.species}
+                  onChangeText={(text) => updateFormField('species', text)}
+                />
+              </View>
+            </View>
 
-          <Text style={styles.label}>Breed</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="e.g., Labrador, Siamese"
-            value={formData.breed}
-            onChangeText={(text) => updateFormField('breed', text)}
-          />
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Breed</Text>
+              <View style={styles.inputWrapper}>
+                <Ionicons name="information-circle-outline" size={22} color="#8e74ae" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g., Labrador, Siamese"
+                  placeholderTextColor="#aaa"
+                  value={formData.breed}
+                  onChangeText={(text) => updateFormField('breed', text)}
+                />
+              </View>
+            </View>
 
-          <Text style={styles.label}>Age</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter age in years"
-            value={formData.age.toString() || ''}
-            onChangeText={(text) => updateFormField('age', text)}
-            keyboardType="numeric"
-          />
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Age</Text>
+              <View style={styles.inputWrapper}>
+                <Ionicons name="calendar-outline" size={22} color="#8e74ae" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter age in years"
+                  placeholderTextColor="#aaa"
+                  value={formData.age.toString() || ''}
+                  onChangeText={(text) => updateFormField('age', text)}
+                  keyboardType="numeric"
+                />
+              </View>
+            </View>
 
-          <Text style={styles.label}>Description</Text>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            placeholder="Enter a description of the animal"
-            value={formData.description}
-            onChangeText={(text) => updateFormField('description', text)}
-            multiline
-            numberOfLines={4}
-          />
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Description</Text>
+              <View style={[styles.inputWrapper, styles.textAreaWrapper]}>
+                <Ionicons name="create-outline" size={22} color="#8e74ae" style={[styles.inputIcon, {alignSelf: 'flex-start', marginTop: 12}]} />
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  placeholder="Enter a description of the animal"
+                  placeholderTextColor="#aaa"
+                  value={formData.description}
+                  onChangeText={(text) => updateFormField('description', text)}
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                />
+              </View>
+            </View>
 
-          <TouchableOpacity
-            style={styles.imageButton}
-            onPress={() => {
-              // Will implement image upload later
-              Alert.alert('Coming Soon', 'Image upload will be available soon!');
-            }}
-          >
-            <Ionicons name="image-outline" size={24} color="#0077B6" />
-            <Text style={styles.imageButtonText}>Add Image</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.imageButton}
+              onPress={() => {
+                // Will implement image upload later
+                Alert.alert('Coming Soon', 'Image upload will be available soon!');
+              }}
+            >
+              <Ionicons name="image-outline" size={24} color="white" />
+              <Text style={styles.imageButtonText}>Add Image</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={handleAddAnimal}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Text style={styles.addButtonText}>Add Animal</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+            <TouchableOpacity
+              onPress={handleAddAnimal}
+              disabled={loading}
+            >
+              <LinearGradient
+                colors={['#a58fd8', '#8e74ae', '#7d5da7']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.addButton}
+              >
+                {loading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.addButtonText}>Add Animal</Text>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
+  gradientContainer: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#f8f8f8',
   },
   scrollContainer: {
     padding: 20,
+    paddingTop: 25,
+    paddingBottom: 40,
   },
   header: {
     marginBottom: 24,
   },
   title: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
-    color: '#0077B6',
-    marginBottom: 8,
+    color: '#8e74ae',
+    marginBottom: 10,
   },
   subtitle: {
     fontSize: 16,
     color: '#666',
+    lineHeight: 22,
   },
   formContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 22,
+    shadowColor: '#8e74ae',
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  inputGroup: {
+    marginBottom: 16,
   },
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: '#555',
     marginBottom: 8,
+    marginLeft: 2,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8F6FB',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E8E0FF',
+    shadowColor: '#8e74ae',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  textAreaWrapper: {
+    alignItems: 'flex-start',
+  },
+  inputIcon: {
+    marginLeft: 15,
+    marginRight: 5,
   },
   input: {
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
+    flex: 1,
+    padding: 15,
     fontSize: 16,
+    color: '#444',
   },
   textArea: {
-    height: 100,
+    height: 120,
     textAlignVertical: 'top',
+    paddingTop: 15,
   },
   imageButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#E1F5FE',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
+    backgroundColor: '#9C84BE',
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 22,
+    marginTop: 6,
+    shadowColor: '#8e74ae',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 4,
   },
   imageButtonText: {
-    marginLeft: 8,
+    marginLeft: 10,
     fontSize: 16,
-    color: '#0077B6',
+    color: 'white',
     fontWeight: '600',
   },
   addButton: {
-    backgroundColor: '#0077B6',
-    borderRadius: 8,
+    borderRadius: 12,
     padding: 16,
     alignItems: 'center',
-    marginTop: 8,
+    shadowColor: '#8e74ae',
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 6,
   },
   addButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: 'bold',
   },
 });
