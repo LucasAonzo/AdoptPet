@@ -15,8 +15,14 @@ import {
   SafeAreaView
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Icon } from 'react-native-elements';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
 import supabase from './src/config/supabase';
+import AnimalDetailScreen from './src/screens/animals/AnimalDetailScreen';
+
+const Stack = createStackNavigator();
 
 // Animal Card Component
 const AnimalCard = ({ animal, onPress }) => {
@@ -70,13 +76,14 @@ const CategoryButton = ({ title, icon, isActive, onPress, backgroundColor, iconB
       styles.categoryIcon, 
       { backgroundColor: iconBackground || backgroundColor || '#ab9abb' }
     ]}>
-      <Ionicons name={icon} size={24} color={isActive ? '#fff' : '#8e74ae'} />
+      <Icon name={icon} type="material-community" color={isActive ? '#fff' : backgroundColor} size={24} />
     </View>
     <Text style={styles.categoryText}>{title}</Text>
   </TouchableOpacity>
 );
 
-export default function App() {
+// Home Screen Component
+const HomeScreen = ({ navigation }) => {
   const [animals, setAnimals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -85,10 +92,10 @@ export default function App() {
 
   const categories = [
     { id: 'all', name: 'All Pets', icon: 'paw', color: '#8e74ae', backgroundColor: '#ab9abb' },
-    { id: 'cat', name: 'Cat', icon: 'paw', color: '#fff', backgroundColor: '#ab9abb', iconBackground: '#e8b3b5' },
-    { id: 'dog', name: 'Dog', icon: 'paw', color: '#fff', backgroundColor: '#b9e6e0', iconBackground: '#a0cbc4' },
-    { id: 'bird', name: 'Bird', icon: 'paw', color: '#fff', backgroundColor: '#a7d1d6', iconBackground: '#8db3b8' },
-    { id: 'other', name: 'Other', icon: 'paw', color: '#fff', backgroundColor: '#f3b8a2', iconBackground: '#d39a84' },
+    { id: 'cat', name: 'Cat', icon: 'cat', color: '#fff', backgroundColor: '#ab9abb', iconBackground: '#e8b3b5' },
+    { id: 'dog', name: 'Dog', icon: 'dog', color: '#fff', backgroundColor: '#b9e6e0', iconBackground: '#a0cbc4' },
+    { id: 'bird', name: 'Bird', icon: 'turtle', color: '#fff', backgroundColor: '#a7d1d6', iconBackground: '#8db3b8' },
+    { id: 'other', name: 'Hams', icon: 'rabbit', color: '#fff', backgroundColor: '#f3b8a2', iconBackground: '#d39a84' },
   ];
 
   const fetchAnimals = async () => {
@@ -96,7 +103,10 @@ export default function App() {
       setLoading(true);
       let query = supabase
         .from('animals')
-        .select('*')
+        .select(`
+          *,
+          users(id, name, email, profile_picture)
+        `)
         .order('created_at', { ascending: false });
       
       // Apply category filter if not "All"
@@ -174,131 +184,158 @@ export default function App() {
   }
 
   return (
-    <SafeAreaProvider>
-      <View style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#8e74ae" />
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#8e74ae" />
+      
+      {/* Safe Area for top inset */}
+      <SafeAreaView style={styles.safeAreaTop} />
+      
+      {/* Custom Header */}
+      <View style={styles.customHeader}>
+        <TouchableOpacity>
+          <Ionicons name="menu" size={26} color="#fff" />
+        </TouchableOpacity>
         
-        {/* Safe Area for top inset */}
-        <SafeAreaView style={styles.safeAreaTop} />
+        <Text style={styles.headerTitle}>AdoptMe</Text>
         
-        {/* Custom Header */}
-        <View style={styles.customHeader}>
-          <TouchableOpacity>
-            <Ionicons name="menu" size={26} color="#fff" />
+        <View style={styles.headerRight}>
+          <TouchableOpacity style={styles.notificationContainer}>
+            <Ionicons name="notifications-outline" size={24} color="#fff" />
+            <View style={styles.notificationBadge} />
           </TouchableOpacity>
-          
-          <Text style={styles.headerTitle}>AdoptMe</Text>
-          
-          <View style={styles.headerRight}>
-            <TouchableOpacity style={styles.notificationContainer}>
-              <Ionicons name="notifications-outline" size={24} color="#fff" />
-              <View style={styles.notificationBadge} />
-            </TouchableOpacity>
-            <TouchableOpacity>
-              <Image 
-                source={{ uri: 'https://randomuser.me/api/portraits/men/32.jpg' }} 
-                style={styles.profilePic}
+          <TouchableOpacity>
+            <Image 
+              source={{ uri: 'https://randomuser.me/api/portraits/men/32.jpg' }} 
+              style={styles.profilePic}
+            />
+          </TouchableOpacity>
+        </View>
+      </View>
+      
+      <SafeAreaView style={styles.safeAreaContent}>
+        <ScrollView 
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 90 }}
+          refreshControl={
+            <RefreshControl 
+              refreshing={refreshing} 
+              onRefresh={handleRefresh}
+              colors={['#8e74ae']}
+              tintColor="#8e74ae"
+            />
+          }
+        >
+          {/* Search Bar */}
+          <View style={styles.searchContainer}>
+            <View style={styles.searchInputContainer}>
+              <TextInput
+                placeholder="Search..."
+                style={styles.searchInput}
+                value={searchText}
+                onChangeText={handleSearch}
               />
+            </View>
+            <TouchableOpacity style={styles.searchButton}>
+              <Ionicons name="search" size={24} color="#fff" />
             </TouchableOpacity>
           </View>
-        </View>
-        
-        <SafeAreaView style={styles.safeAreaContent}>
+          
+          {/* Community Banner */}
+          <View style={styles.bannerContainer}>
+            <View style={styles.bannerContent}>
+              <Text style={styles.bannerTitle}>Join our animal lovers Community</Text>
+              <TouchableOpacity style={styles.joinButton}>
+                <Text style={styles.joinButtonText}>Join Now</Text>
+              </TouchableOpacity>
+            </View>
+            <Image 
+              source={{ uri: 'https://images.unsplash.com/photo-1543852786-1cf6624b9987?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80' }} 
+              style={styles.bannerImage}
+            />
+          </View>
+          
+          {/* Pet Categories Section */}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Pet Categories</Text>
+            <TouchableOpacity>
+              <Text style={styles.seeAllText}>More Category</Text>
+            </TouchableOpacity>
+          </View>
+          
+          {/* Categories List */}
           <ScrollView 
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 90 }}
-            refreshControl={
-              <RefreshControl 
-                refreshing={refreshing} 
-                onRefresh={handleRefresh}
-                colors={['#8e74ae']}
-                tintColor="#8e74ae"
-              />
-            }
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            style={styles.categoriesContainer}
           >
-            {/* Search Bar */}
-            <View style={styles.searchContainer}>
-              <View style={styles.searchInputContainer}>
-                <TextInput
-                  placeholder="Search..."
-                  style={styles.searchInput}
-                  value={searchText}
-                  onChangeText={handleSearch}
-                />
-              </View>
-              <TouchableOpacity style={styles.searchButton}>
-                <Ionicons name="search" size={24} color="#fff" />
-              </TouchableOpacity>
-            </View>
-            
-            {/* Community Banner */}
-            <View style={styles.bannerContainer}>
-              <View style={styles.bannerContent}>
-                <Text style={styles.bannerTitle}>Join our animal lovers Community</Text>
-                <TouchableOpacity style={styles.joinButton}>
-                  <Text style={styles.joinButtonText}>Join Now</Text>
-                </TouchableOpacity>
-              </View>
-              <Image 
-                source={{ uri: 'https://images.unsplash.com/photo-1543852786-1cf6624b9987?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80' }} 
-                style={styles.bannerImage}
+            {categories.map((category) => (
+              <CategoryButton
+                key={category.id}
+                title={category.name}
+                icon={category.icon}
+                isActive={selectedCategory === category.id}
+                onPress={() => handleCategoryPress(category.id)}
+                backgroundColor={category.backgroundColor}
+                iconBackground={category.iconBackground}
               />
+            ))}
+          </ScrollView>
+          
+          {/* Adopt Pet Section */}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Adopt pet</Text>
+            <TouchableOpacity>
+              <Text style={styles.seeAllText}>See all</Text>
+            </TouchableOpacity>
+          </View>
+          
+          {/* Pet Cards */}
+          {getFilteredAnimals().length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No animals available for adoption</Text>
             </View>
-            
-            {/* Pet Categories Section */}
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Pet Categories</Text>
-              <TouchableOpacity>
-                <Text style={styles.seeAllText}>More Category</Text>
-              </TouchableOpacity>
-            </View>
-            
-            {/* Categories List */}
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              style={styles.categoriesContainer}
-            >
-              {categories.map((category) => (
-                <CategoryButton
-                  key={category.id}
-                  title={category.name}
-                  icon={category.icon}
-                  isActive={selectedCategory === category.id}
-                  onPress={() => handleCategoryPress(category.id)}
-                  backgroundColor={category.backgroundColor}
-                  iconBackground={category.iconBackground}
+          ) : (
+            <View style={styles.petsContainer}>
+              {getFilteredAnimals().map((animal) => (
+                <AnimalCard 
+                  key={animal.id} 
+                  animal={animal} 
+                  onPress={() => navigation.navigate('AnimalDetail', { animal })} 
                 />
               ))}
-            </ScrollView>
-            
-            {/* Adopt Pet Section */}
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Adopt pet</Text>
-              <TouchableOpacity>
-                <Text style={styles.seeAllText}>See all</Text>
-              </TouchableOpacity>
             </View>
-            
-            {/* Pet Cards */}
-            {getFilteredAnimals().length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>No animals available for adoption</Text>
-              </View>
-            ) : (
-              <View style={styles.petsContainer}>
-                {getFilteredAnimals().map((animal) => (
-                  <AnimalCard 
-                    key={animal.id} 
-                    animal={animal} 
-                    onPress={() => {}} 
-                  />
-                ))}
-              </View>
-            )}
-          </ScrollView>
-        </SafeAreaView>
-      </View>
+          )}
+        </ScrollView>
+      </SafeAreaView>
+    </View>
+  );
+};
+
+export default function App() {
+  return (
+    <SafeAreaProvider>
+      <NavigationContainer>
+        <Stack.Navigator
+          screenOptions={{
+            headerShown: false,
+            cardStyle: { backgroundColor: '#f8f8f8' },
+            headerLargeTitle: false,
+            headerTitleStyle: {
+              fontWeight: 'bold',
+              fontSize: 18
+            }
+          }}
+        >
+          <Stack.Screen 
+            name="Home" 
+            component={HomeScreen} 
+          />
+          <Stack.Screen 
+            name="AnimalDetail" 
+            component={AnimalDetailScreen} 
+          />
+        </Stack.Navigator>
+      </NavigationContainer>
     </SafeAreaProvider>
   );
 }
