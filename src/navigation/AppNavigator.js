@@ -1,4 +1,5 @@
 import React from 'react';
+import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,6 +15,7 @@ import AddAnimalScreen from '../screens/animals/AddAnimalScreen';
 
 // Profile Screens
 import ProfileScreen from '../screens/profile/ProfileScreen';
+import HomeScreen from '../screens/home/HomeScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -129,17 +131,31 @@ const MainNavigator = () => {
   );
 };
 
-// Root Navigator
-const RootNavigator = ({ userToken }) => {
+const AppNavigator = () => {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {userToken ? (
-        <Stack.Screen name="Main" component={MainNavigator} />
-      ) : (
-        <Stack.Screen name="Auth" component={AuthNavigator} />
-      )}
-    </Stack.Navigator>
+    <NavigationContainer>
+      <Stack.Navigator
+        screenOptions={{
+          headerShown: false,
+          cardStyle: { backgroundColor: '#f8f8f8' },
+          headerLargeTitle: false,
+          headerTitleStyle: {
+            fontWeight: 'bold',
+            fontSize: 18
+          }
+        }}
+      >
+        <Stack.Screen 
+          name="Home" 
+          component={HomeScreen} 
+        />
+        <Stack.Screen 
+          name="AnimalDetail" 
+          component={AnimalDetailScreen} 
+        />
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 };
 
-export { RootNavigator, AuthNavigator, MainNavigator }; 
+export default AppNavigator; 
