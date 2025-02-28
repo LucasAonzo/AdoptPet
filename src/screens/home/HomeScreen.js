@@ -3,7 +3,6 @@ import {
   View, 
   Text, 
   ActivityIndicator, 
-  StyleSheet, 
   RefreshControl,
   ScrollView,
   SafeAreaView
@@ -18,6 +17,7 @@ import {
   CategoriesSection,
   PetsList
 } from '../../components/home';
+import styles from './HomeScreen.styles';
 
 const HomeScreen = ({ navigation }) => {
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -112,16 +112,5 @@ const HomeScreen = ({ navigation }) => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f8f8',
-  },
-  safeAreaContent: {
-    flex: 1,
-    backgroundColor: '#f8f8f8',
-  }
-});
 
 export default HomeScreen; 

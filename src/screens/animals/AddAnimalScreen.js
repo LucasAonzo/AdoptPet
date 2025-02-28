@@ -1,34 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
   ScrollView,
   Alert,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../context/AuthContext';
 import AnimalService from '../../services/animalService';
 import supabase from '../../config/supabase';
+import styles from './AddAnimalScreen.styles';
+import { useCreateAnimal, useUpdateAnimal } from '../../hooks/useAnimalMutations';
+import { pickImage, formatImageForUpload } from '../../utils/imageUtils';
+import * as ImagePicker from 'expo-image-picker';
+import debugImagePicker from '../../utils/imagePickerDebug';
 
-const AddAnimalScreen = ({ navigation }) => {
+const AddAnimalScreen = ({ navigation, route }) => {
   const { user } = useAuth();
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const { mutate: createAnimal } = useCreateAnimal(navigation);
+  const { mutate: updateAnimal } = useUpdateAnimal(navigation);
+  
+  // Check if we're in edit mode
+  const editMode = route.params?.editMode || false;
+  const animalToEdit = route.params?.animal || null;
+  
+  // Initialize form data with default values or the animal data if in edit mode
   const [formData, setFormData] = useState({
-    name: '',
-    species: '',
-    breed: '',
-    age: '',
-    description: '',
-    image_url: 'https://example.com/placeholder.jpg', // Placeholder for now
-    is_adopted: false,
-    user_id: user?.id || null,
+    name: editMode && animalToEdit ? animalToEdit.name : '',
+    age: editMode && animalToEdit ? animalToEdit.age : '',
+    species: editMode && animalToEdit ? animalToEdit.species : '',
+    breed: editMode && animalToEdit ? animalToEdit.breed : '',
+    description: editMode && animalToEdit ? animalToEdit.description : '',
+    image_url: editMode && animalToEdit ? animalToEdit.image_url : '',
+    is_adopted: editMode && animalToEdit ? animalToEdit.is_adopted : false,
+    // Add fields for image handling
+    imageBase64: null,
+    hasNewImage: false,
   });
 
   const updateFormField = (field, value) => {
@@ -52,76 +67,151 @@ const AddAnimalScreen = ({ navigation }) => {
 
   const handleAddAnimal = async () => {
     if (!validateForm()) return;
-
-    // Ensure user_id is set to the current user's ID
-    const animalData = {
-      ...formData,
-      user_id: user.id,
-    };
-
-    setLoading(true);
+    
+    setIsLoading(true);
+    
     try {
-      // First, check if the user exists in the users table
-      const { data: userData, error: userCheckError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('id', user.id)
-        .single();
+      // Prepare the animal data without extra image fields
+      const animalData = {
+        name: formData.name,
+        age: formData.age,
+        species: formData.species,
+        breed: formData.breed,
+        description: formData.description,
+        is_adopted: formData.is_adopted,
+        image_url: formData.image_url,
+      };
       
-      // If user doesn't exist in the users table, create them
-      if (userCheckError && userCheckError.code === 'PGRST116') {
-        console.log('User not found in users table, creating user record...');
-        const { error: createUserError } = await supabase
-          .from('users')
-          .insert([{
-            id: user.id,
-            email: user.email,
-            name: user.user_metadata?.name || '',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }]);
-        
-        if (createUserError) {
-          console.error('Error creating user record:', createUserError);
-          Alert.alert('Error', 'Failed to create user record. Please try again.');
-          setLoading(false);
-          return;
-        }
-      } else if (userCheckError) {
-        console.error('Error checking user:', userCheckError);
+      // Prepare image data if we have a new image
+      const imageData = formData.hasNewImage && formData.imageBase64 
+        ? { base64: formData.imageBase64 } 
+        : null;
+      
+      if (editMode && animalToEdit) {
+        // Update existing animal
+        updateAnimal({
+          animalId: animalToEdit.id,
+          animalData: animalData,
+          imageData: imageData
+        });
+      } else {
+        // Create new animal
+        createAnimal({
+          animalData: animalData,
+          imageData: imageData
+        });
       }
-
-      // Now create the animal
-      const result = await AnimalService.createAnimal(animalData);
-      setLoading(false);
-
-      if (!result.success) {
-        Alert.alert('Error', result.error.message || 'Failed to create animal');
-        return;
-      }
-
-      Alert.alert(
-        'Success',
-        'Animal added successfully!',
-        [{ text: 'OK', onPress: () => navigation.navigate('Home') }]
-      );
-
-      // Clear the form
-      setFormData({
-        name: '',
-        species: '',
-        breed: '',
-        age: '',
-        description: '',
-        image_url: 'https://example.com/placeholder.jpg',
-        is_adopted: false,
-        user_id: user?.id || null,
-      });
     } catch (error) {
-      setLoading(false);
-      Alert.alert('Error', error.message || 'An unexpected error occurred');
+      console.error('Error:', error);
+      Alert.alert('Error', `Failed to ${editMode ? 'update' : 'create'} animal listing`);
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  // Handle image picking using our utility function
+  const handleImagePick = async () => {
+    try {
+      // Debug ImagePicker API
+      debugImagePicker();
+      
+      // First try our utility function
+      const result = await pickImage({
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+      
+      if (result) {
+        // Store base64 image temporarily
+        setFormData(prev => ({
+          ...prev,
+          imageBase64: result.base64,
+          // Keep the original image_url but mark it for update
+          image_url: prev.image_url,
+          hasNewImage: true
+        }));
+        return;
+      }
+      
+      // If our utility fails, try direct approach as fallback
+      console.log("Falling back to direct ImagePicker implementation");
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (permissionResult.granted === false) {
+        Alert.alert('Permission Required', 'You need to grant camera roll permissions to upload images.');
+        return;
+      }
+      
+      // Launch image picker directly
+      const pickerResult = await ImagePicker.launchImageLibraryAsync({
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+        base64: true,
+      });
+      
+      if (!pickerResult.canceled && pickerResult.assets && pickerResult.assets.length > 0) {
+        const asset = pickerResult.assets[0];
+        setFormData(prev => ({
+          ...prev,
+          imageBase64: asset.base64,
+          image_url: prev.image_url,
+          hasNewImage: true
+        }));
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image. Please try again.');
+    }
+  };
+
+  // Render picked image or placeholder
+  const renderImagePreview = () => {
+    if (formData.hasNewImage && formData.imageBase64) {
+      // Show the newly selected image
+      return (
+        <View style={styles.imagePreviewContainer}>
+          <Image 
+            source={{ uri: `data:image/jpeg;base64,${formData.imageBase64}` }} 
+            style={styles.imagePreview} 
+            resizeMode="cover" 
+          />
+          <TouchableOpacity 
+            style={styles.changeImageButton}
+            onPress={handleImagePick}
+          >
+            <Text style={styles.changeImageText}>Change Image</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    } else if (formData.image_url) {
+      // Show the existing image
+      return (
+        <View style={styles.imagePreviewContainer}>
+          <Image 
+            source={{ uri: formData.image_url }} 
+            style={styles.imagePreview} 
+            resizeMode="cover" 
+          />
+          <TouchableOpacity 
+            style={styles.changeImageButton}
+            onPress={handleImagePick}
+          >
+            <Text style={styles.changeImageText}>Change Image</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+    
+    return null;
+  };
+
+  // Update navigation title based on mode
+  useEffect(() => {
+    navigation.setOptions({
+      title: editMode ? 'Edit Animal' : 'Add New Animal'
+    });
+  }, [navigation, editMode]);
 
   return (
     <LinearGradient
@@ -137,9 +227,14 @@ const AddAnimalScreen = ({ navigation }) => {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.header}>
-            <Text style={styles.title}>Add a New Animal</Text>
+            <Text style={styles.title}>
+              {editMode ? 'Edit Animal' : 'Add a New Animal'}
+            </Text>
             <Text style={styles.subtitle}>
-              Enter the details of the animal you want to add for adoption
+              {editMode 
+                ? 'Update the details of your animal listing' 
+                : 'Enter the details of the animal you want to add for adoption'
+              }
             </Text>
           </View>
 
@@ -218,20 +313,21 @@ const AddAnimalScreen = ({ navigation }) => {
               </View>
             </View>
 
-            <TouchableOpacity
-              style={styles.imageButton}
-              onPress={() => {
-                // Will implement image upload later
-                Alert.alert('Coming Soon', 'Image upload will be available soon!');
-              }}
-            >
-              <Ionicons name="image-outline" size={24} color="white" />
-              <Text style={styles.imageButtonText}>Add Image</Text>
-            </TouchableOpacity>
+            {renderImagePreview()}
+            {(!formData.image_url && !formData.hasNewImage) && (
+              <TouchableOpacity
+                style={styles.imageButton}
+                onPress={handleImagePick}
+              >
+                <Ionicons name="image-outline" size={24} color="white" />
+                <Text style={styles.imageButtonText}>Add Image</Text>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity
+              style={styles.addButton}
               onPress={handleAddAnimal}
-              disabled={loading}
+              disabled={isLoading}
             >
               <LinearGradient
                 colors={['#a58fd8', '#8e74ae', '#7d5da7']}
@@ -239,10 +335,12 @@ const AddAnimalScreen = ({ navigation }) => {
                 end={{ x: 1, y: 0 }}
                 style={styles.addButton}
               >
-                {loading ? (
-                  <ActivityIndicator size="small" color="#fff" />
+                {isLoading ? (
+                  <ActivityIndicator color="#fff" size="small" />
                 ) : (
-                  <Text style={styles.addButtonText}>Add Animal</Text>
+                  <Text style={styles.addButtonText}>
+                    {editMode ? 'Update Animal' : 'Add Animal'}
+                  </Text>
                 )}
               </LinearGradient>
             </TouchableOpacity>
@@ -252,129 +350,5 @@ const AddAnimalScreen = ({ navigation }) => {
     </LinearGradient>
   );
 };
-
-const styles = StyleSheet.create({
-  gradientContainer: {
-    flex: 1,
-  },
-  container: {
-    flex: 1,
-  },
-  scrollContainer: {
-    padding: 20,
-    paddingTop: 25,
-    paddingBottom: 40,
-  },
-  header: {
-    marginBottom: 24,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#8e74ae',
-    marginBottom: 10,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    lineHeight: 22,
-  },
-  formContainer: {
-    backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 22,
-    shadowColor: '#8e74ae',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 5,
-  },
-  inputGroup: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#555',
-    marginBottom: 8,
-    marginLeft: 2,
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8F6FB',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E8E0FF',
-    shadowColor: '#8e74ae',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  textAreaWrapper: {
-    alignItems: 'flex-start',
-  },
-  inputIcon: {
-    marginLeft: 15,
-    marginRight: 5,
-  },
-  input: {
-    flex: 1,
-    padding: 15,
-    fontSize: 16,
-    color: '#444',
-  },
-  textArea: {
-    height: 120,
-    textAlignVertical: 'top',
-    paddingTop: 15,
-  },
-  imageButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#9C84BE',
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 22,
-    marginTop: 6,
-    shadowColor: '#8e74ae',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 4,
-  },
-  imageButtonText: {
-    marginLeft: 10,
-    fontSize: 16,
-    color: 'white',
-    fontWeight: '600',
-  },
-  addButton: {
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    shadowColor: '#8e74ae',
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 6,
-  },
-  addButtonText: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: 'bold',
-  },
-});
 
 export default AddAnimalScreen; 

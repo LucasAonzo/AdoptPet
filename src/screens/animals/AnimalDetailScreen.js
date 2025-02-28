@@ -2,14 +2,12 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   ScrollView,
   TouchableOpacity,
   Alert,
   ActivityIndicator,
   SafeAreaView,
   StatusBar,
-  Dimensions,
   Image,
   Animated,
   Platform
@@ -18,14 +16,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import supabase from '../../config/supabase';
 import { useAnimal } from '../../hooks/useAnimals';
-
-const { width } = Dimensions.get('window');
-const cardWidth = (width - 60) / 2; // 2 cards per row with margins
+import { useAuth } from '../../context/AuthContext';
+import { useUpdateAnimal, useDeleteAnimal } from '../../hooks/useAnimalMutations';
+import styles from './AnimalDetailScreen.styles';
 
 const AnimalDetailScreen = ({ route, navigation }) => {
   const { animal: initialAnimal } = route.params;
   const [isFavorite, setIsFavorite] = useState(false);
   const scrollY = useRef(new Animated.Value(0)).current;
+  const { user } = useAuth();
+  const { mutate: deleteAnimal } = useDeleteAnimal(navigation);
 
   // Set screen options on component mount
   useEffect(() => {
@@ -55,6 +55,9 @@ const AnimalDetailScreen = ({ route, navigation }) => {
   // Use state from the fetched data or fall back to initial data
   const isAdopted = animal?.is_adopted || initialAnimal.is_adopted;
   const displayAnimal = animal || initialAnimal;
+
+  // Check if current user is the owner of the animal
+  const isOwner = user?.id && animal?.user_id === user.id;
 
   const handleAdopt = async () => {
     try {
@@ -109,6 +112,30 @@ const AnimalDetailScreen = ({ route, navigation }) => {
       // Show a small animation or feedback when adding to favorites
       Alert.alert('Added to Favorites', `${displayAnimal.name} has been added to your favorites!`);
     }
+  };
+
+  const handleEdit = () => {
+    navigation.navigate('Add', { 
+      editMode: true, 
+      animal: animal || initialAnimal 
+    });
+  };
+
+  const handleDelete = () => {
+    Alert.alert(
+      'Confirm Deletion',
+      `Are you sure you want to delete ${displayAnimal.name}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Delete', 
+          style: 'destructive',
+          onPress: () => {
+            deleteAnimal(displayAnimal.id);
+          }
+        }
+      ]
+    );
   };
 
   // Show loading state
@@ -319,8 +346,44 @@ const AnimalDetailScreen = ({ route, navigation }) => {
             </View>
           </View>
           
-          {/* Adopt Button */}
-          {!isAdopted ? (
+          {/* Owner Controls or Adopt Button */}
+          {isOwner ? (
+            <View style={styles.ownerControlsContainer}>
+              <TouchableOpacity 
+                style={styles.editButton}
+                onPress={handleEdit}
+              >
+                <LinearGradient
+                  colors={['#a58fd8', '#8e74ae', '#7d5da7']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.editButtonGradient}
+                >
+                  <View style={styles.buttonContent}>
+                    <Ionicons name="create-outline" size={20} color="#fff" />
+                    <Text style={styles.buttonText}>Edit</Text>
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.deleteButton}
+                onPress={handleDelete}
+              >
+                <LinearGradient
+                  colors={['#e74c3c', '#c0392b', '#962d22']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.deleteButtonGradient}
+                >
+                  <View style={styles.buttonContent}>
+                    <Ionicons name="trash-outline" size={20} color="#fff" />
+                    <Text style={styles.buttonText}>Delete</Text>
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          ) : !isAdopted ? (
             <TouchableOpacity 
               style={styles.adoptButton}
               onPress={handleAdopt}
@@ -364,355 +427,5 @@ const AnimalDetailScreen = ({ route, navigation }) => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f8f8',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-  },
-  loadingText: {
-    marginTop: 15,
-    fontSize: 16,
-    color: '#666',
-  },
-  mainContent: {
-    flex: 1,
-  },
-  petDetailImageContainer: {
-    position: 'relative',
-    width: '100%',
-    height: 350,
-  },
-  petDetailImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  imageGradientOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  detailHeaderButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    position: 'absolute',
-    top: 20,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 20,
-    zIndex: 9,
-  },
-  detailHeaderButton: {
-    width: 45,
-    height: 45,
-    borderRadius: 23,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  detailImageIndicator: {
-    position: 'absolute',
-    bottom: 15,
-    alignSelf: 'center',
-    width: 50,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-  },
-  petDetailContent: {
-    flex: 1,
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    marginTop: -30,
-    paddingHorizontal: 25,
-    paddingTop: 30,
-  },
-  petDetailHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  petNameContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  speciesIcon: {
-    marginRight: 8,
-  },
-  petDetailName: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-    textShadowColor: 'rgba(0, 0, 0, 0.1)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-  },
-  statusBadge: {
-    backgroundColor: '#8e74ae',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    shadowColor: '#8e74ae',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  statusText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
-    textTransform: 'capitalize',
-  },
-  petDetailLocation: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 25,
-  },
-  petDetailLocationText: {
-    fontSize: 16,
-    color: '#666',
-    marginLeft: 8,
-  },
-  petInfoCardsContainer: {
-    marginBottom: 25,
-  },
-  petInfoCardRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 15,
-  },
-  petInfoCard: {
-    width: cardWidth,
-    backgroundColor: '#f8f6fb',
-    borderRadius: 15,
-    padding: 15,
-    alignItems: 'center',
-    shadowColor: '#8e74ae',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: 'rgba(142, 116, 174, 0.1)',
-  },
-  petInfoCardValue: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 5,
-    textAlign: 'center',
-  },
-  petInfoCardLabel: {
-    fontSize: 14,
-    color: '#888',
-    textAlign: 'center',
-  },
-  ownerSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 20,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: '#f0f0f0',
-    marginBottom: 25,
-  },
-  ownerInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  ownerImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    borderWidth: 2,
-    borderColor: '#8e74ae',
-  },
-  ownerTextInfo: {
-    marginLeft: 15,
-  },
-  ownerLabel: {
-    fontSize: 14,
-    color: '#888',
-  },
-  ownerName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  contactButtons: {
-    flexDirection: 'row',
-  },
-  contactButton: {
-    width: 45,
-    height: 45,
-    borderRadius: 23,
-    backgroundColor: '#8e74ae',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 10,
-    shadowColor: '#8e74ae',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  descriptionSection: {
-    marginBottom: 25,
-    backgroundColor: '#f8f6fb',
-    padding: 20,
-    borderRadius: 15,
-    borderLeftWidth: 4,
-    borderLeftColor: '#8e74ae',
-  },
-  descriptionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 10,
-  },
-  descriptionText: {
-    fontSize: 16,
-    lineHeight: 24,
-    color: '#666',
-  },
-  compatibilitySection: {
-    marginBottom: 25,
-    backgroundColor: '#f9f9f9',
-    padding: 20,
-    borderRadius: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  compatibilityTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 15,
-  },
-  compatibilityIcons: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  compatibilityItem: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(76, 175, 80, 0.1)',
-    padding: 10,
-    borderRadius: 10,
-    width: 80,
-  },
-  compatibilityText: {
-    marginTop: 5,
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  adoptionDetailsSection: {
-    marginBottom: 25,
-    backgroundColor: '#f8f6fb',
-    padding: 20,
-    borderRadius: 15,
-    shadowColor: '#8e74ae',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 15,
-  },
-  adoptionDetailItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-    backgroundColor: 'white',
-    padding: 10,
-    borderRadius: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  adoptionDetailText: {
-    marginLeft: 10,
-    fontSize: 16,
-    color: '#666',
-  },
-  adoptButton: {
-    borderRadius: 30,
-    marginBottom: 30,
-    shadowColor: '#8e74ae',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 5,
-    overflow: 'hidden',
-  },
-  adoptButtonGradient: {
-    padding: 18,
-    alignItems: 'center',
-  },
-  adoptButtonDisabled: {
-    opacity: 0.9,
-  },
-  adoptButtonContent: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  adoptButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 18,
-  },
-  adoptButtonFee: {
-    color: '#fff',
-    fontSize: 16,
-    marginLeft: 10,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-  },
-  errorText: {
-    marginTop: 15,
-    fontSize: 16,
-    color: '#e74c3c',
-  },
-  retryButton: {
-    marginTop: 20,
-    backgroundColor: '#8e74ae',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 5,
-  },
-  retryButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  }
-});
 
 export default AnimalDetailScreen; 

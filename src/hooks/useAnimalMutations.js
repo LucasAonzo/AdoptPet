@@ -1,8 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Alert } from 'react-native';
-import { decode } from 'base64-arraybuffer';
 import supabase from '../config/supabase';
 import { useAuth } from '../context/AuthContext';
+import StorageService from '../services/storageService';
+import { generateUniqueFileName } from '../utils/imageUtils';
+import { decode } from 'base64-arraybuffer';
 
 /**
  * Hook to create a new animal
@@ -16,38 +18,49 @@ export const useCreateAnimal = (navigation) => {
       if (!user?.id) throw new Error('User not authenticated');
       
       try {
-        // Upload image first
+        // Upload image first if provided
         let imageUrl = null;
         
         if (imageData?.base64) {
-          const fileName = `animal_${Date.now()}.jpg`;
-          const contentType = 'image/jpeg';
-          const base64FileData = imageData.base64;
-          
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('animal_images')
-            .upload(fileName, decode(base64FileData), {
-              contentType,
-              upsert: true,
-            });
-          
-          if (uploadError) throw uploadError;
-          
-          // Get public URL
-          const { data: { publicUrl } } = supabase.storage
-            .from('animal_images')
-            .getPublicUrl(fileName);
-          
-          imageUrl = publicUrl;
+          try {
+            // Use a simpler, direct upload approach
+            const fileName = `animal_${Date.now()}.jpg`;
+            
+            // Upload using direct Supabase call
+            const { data, error } = await supabase.storage
+              .from('animals')
+              .upload(fileName, decode(imageData.base64), {
+                contentType: 'image/jpeg',
+                upsert: true
+              });
+              
+            if (error) {
+              console.error("Direct upload failed:", error);
+            } else {
+              // Get public URL
+              const { data: urlData } = supabase.storage
+                .from('animals')
+                .getPublicUrl(fileName);
+                
+              imageUrl = urlData.publicUrl;
+            }
+          } catch (imageError) {
+            console.error("Image upload failed:", imageError);
+            // Proceed without image if upload fails
+          }
         }
         
-        // Create animal record
+        // Create animal record - with only the fields that exist in the database
         const { data, error } = await supabase
           .from('animals')
           .insert([{
-            ...animalData,
+            name: animalData.name,
+            species: animalData.species,
+            breed: animalData.breed,
+            age: animalData.age,
+            description: animalData.description, 
             user_id: user.id,
-            image_url: imageUrl,
+            image_url: imageUrl || animalData.image_url,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
             is_adopted: false
@@ -97,34 +110,46 @@ export const useUpdateAnimal = (navigation) => {
         let imageUrl = animalData.image_url;
         
         if (imageData?.base64) {
-          const fileName = `animal_${animalId}_${Date.now()}.jpg`;
-          const contentType = 'image/jpeg';
-          const base64FileData = imageData.base64;
-          
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('animal_images')
-            .upload(fileName, decode(base64FileData), {
-              contentType,
-              upsert: true,
-            });
-          
-          if (uploadError) throw uploadError;
-          
-          // Get public URL
-          const { data: { publicUrl } } = supabase.storage
-            .from('animal_images')
-            .getPublicUrl(fileName);
-          
-          imageUrl = publicUrl;
+          try {
+            // Use a simpler, direct upload approach
+            const fileName = `animal_${animalId}_${Date.now()}.jpg`;
+            
+            // Upload using direct Supabase call
+            const { data, error } = await supabase.storage
+              .from('animals')
+              .upload(fileName, decode(imageData.base64), {
+                contentType: 'image/jpeg',
+                upsert: true
+              });
+              
+            if (error) {
+              console.error("Direct upload failed:", error);
+            } else {
+              // Get public URL
+              const { data: urlData } = supabase.storage
+                .from('animals')
+                .getPublicUrl(fileName);
+                
+              imageUrl = urlData.publicUrl;
+            }
+          } catch (imageError) {
+            console.error("Image upload failed:", imageError);
+            // Keep the existing image_url if upload fails
+          }
         }
         
-        // Update animal record
+        // Update animal record with only fields that exist in the database
         const { data, error } = await supabase
           .from('animals')
           .update({
-            ...animalData,
+            name: animalData.name,
+            species: animalData.species,
+            breed: animalData.breed,
+            age: animalData.age,
+            description: animalData.description,
             image_url: imageUrl,
             updated_at: new Date().toISOString(),
+            is_adopted: animalData.is_adopted
           })
           .eq('id', animalId)
           .select()
