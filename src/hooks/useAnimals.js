@@ -63,7 +63,7 @@ export const useAnimals = ({ category = 'all', searchText = '' }) => {
         
         console.log(`Retrieved ${data?.length || 0} animals, total count: ${count || 0}`);
         if (data && data.length > 0) {
-          console.log('Sample animal:', JSON.stringify(data[0], null, 2));
+          
         }
         
         return {

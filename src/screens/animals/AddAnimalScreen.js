@@ -21,45 +21,122 @@ import { useCreateAnimal, useUpdateAnimal } from '../../hooks/useAnimalMutations
 import { pickImage, formatImageForUpload } from '../../utils/imageUtils';
 import * as ImagePicker from 'expo-image-picker';
 import debugImagePicker from '../../utils/imagePickerDebug';
+import { useFocusEffect } from '@react-navigation/native';
+import { LoadingOverlay } from '../../components/common';
+import { useModalContext } from '../../components/modals';
 
 const AddAnimalScreen = ({ navigation, route }) => {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const { mutate: createAnimal } = useCreateAnimal(navigation);
-  const { mutate: updateAnimal } = useUpdateAnimal(navigation);
+  const { 
+    showSuccessModal, 
+    showErrorModal,
+    showLoadingModal,
+    hideModal
+  } = useModalContext();
+  
+  // Create and update animal mutations
+  const { mutate: createAnimal, isPending: isCreating } = useCreateAnimal(navigation);
+  const { mutate: updateAnimal, isPending: isUpdating } = useUpdateAnimal(navigation);
   
   // Check if we're in edit mode
   const editMode = route.params?.editMode || false;
   const animalToEdit = route.params?.animal || null;
   
-  // Initialize form data with default values or the animal data if in edit mode
+  // Initialize form data with default empty values
   const [formData, setFormData] = useState({
-    name: editMode && animalToEdit ? animalToEdit.name : '',
-    age: editMode && animalToEdit ? animalToEdit.age : '',
-    species: editMode && animalToEdit ? animalToEdit.species : '',
-    breed: editMode && animalToEdit ? animalToEdit.breed : '',
-    description: editMode && animalToEdit ? animalToEdit.description : '',
-    image_url: editMode && animalToEdit ? animalToEdit.image_url : '',
-    is_adopted: editMode && animalToEdit ? animalToEdit.is_adopted : false,
-    // Add fields for image handling
+    name: '',
+    age: '',
+    species: '',
+    breed: '',
+    description: '',
+    image_url: '',
+    is_adopted: false,
     imageBase64: null,
     hasNewImage: false,
   });
 
+  // Function to reset the form to initial state
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      age: '',
+      species: '',
+      breed: '',
+      description: '',
+      image_url: '',
+      is_adopted: false,
+      imageBase64: null,
+      hasNewImage: false,
+    });
+    console.log('Form data reset to initial state');
+  };
+
+  // Reset form when we navigate to this screen (when it comes into focus)
+  // But only reset if not in edit mode
+  useFocusEffect(
+    React.useCallback(() => {
+      // When the screen comes into focus
+      if (!editMode) {
+        resetForm();
+      }
+      return () => {
+        // When the screen goes out of focus
+        // No cleanup needed here
+      };
+    }, [editMode])
+  );
+
+  // Add a dedicated useEffect to initialize form data when in edit mode
+  useEffect(() => {
+    if (editMode && animalToEdit) {
+      console.log('Initializing form data for edit mode:', animalToEdit);
+      setFormData({
+        name: animalToEdit.name || '',
+        age: animalToEdit.age !== undefined ? String(animalToEdit.age) : '',
+        species: animalToEdit.species || '',
+        breed: animalToEdit.breed || '',
+        description: animalToEdit.description || '',
+        image_url: animalToEdit.image_url || '',
+        is_adopted: animalToEdit.is_adopted || false,
+        imageBase64: null,
+        hasNewImage: false,
+      });
+    }
+  }, [editMode, animalToEdit]);
+
+  // Log form data changes for debugging
+  useEffect(() => {
+    if (editMode) {
+      console.log('Current form data:', formData);
+    }
+  }, [formData, editMode]);
+
   const updateFormField = (field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: field === 'age' ? (value ? parseInt(value, 10) : '') : value,
-    }));
+    setFormData(prev => {
+      // Special handling for age field - ensure it's stored as a string in the form
+      // but will be converted to number when submitted
+      if (field === 'age') {
+        // Only try to parse as int if there's a value
+        return {
+          ...prev,
+          [field]: value // Store age as string in the form
+        };
+      } 
+      return {
+        ...prev,
+        [field]: value
+      };
+    });
   };
 
   const validateForm = () => {
     if (!formData.name) {
-      Alert.alert('Missing Information', 'Please enter a name for the animal');
+      showErrorModal('Missing Information', 'Please enter a name for the animal');
       return false;
     }
     if (!formData.species) {
-      Alert.alert('Missing Information', 'Please enter the animal species');
+      showErrorModal('Missing Information', 'Please enter the animal species');
       return false;
     }
     return true;
@@ -69,12 +146,13 @@ const AddAnimalScreen = ({ navigation, route }) => {
     if (!validateForm()) return;
     
     setIsLoading(true);
+    showLoadingModal(editMode ? 'Updating animal...' : 'Creating new animal...');
     
     try {
       // Prepare the animal data without extra image fields
       const animalData = {
         name: formData.name,
-        age: formData.age,
+        age: formData.age ? parseInt(formData.age, 10) : null, // Convert age string to number
         species: formData.species,
         breed: formData.breed,
         description: formData.description,
@@ -89,21 +167,55 @@ const AddAnimalScreen = ({ navigation, route }) => {
       
       if (editMode && animalToEdit) {
         // Update existing animal
-        updateAnimal({
-          animalId: animalToEdit.id,
-          animalData: animalData,
-          imageData: imageData
-        });
+        console.log('Updating animal with ID:', animalToEdit.id);
+        console.log('Update data:', animalData);
+        
+        updateAnimal(
+          {
+            animalId: animalToEdit.id,
+            animalData: animalData,
+            imageData: imageData
+          },
+          {
+            onSuccess: (data) => {
+              hideModal(); // Hide loading modal
+              showSuccessModal('Success', 'Animal updated successfully!', () => {
+                // Navigate back to animal detail screen after user acknowledges success
+                navigation.goBack();
+              });
+              // Don't reset form here since we're navigating away
+            },
+            onError: (error) => {
+              hideModal(); // Hide loading modal
+              showErrorModal('Error', `Failed to update animal: ${error.message}`);
+            }
+          }
+        );
       } else {
         // Create new animal
-        createAnimal({
-          animalData: animalData,
-          imageData: imageData
-        });
+        createAnimal(
+          {
+            animalData: animalData,
+            imageData: imageData
+          },
+          {
+            onSuccess: (data) => {
+              hideModal(); // Hide loading modal
+              showSuccessModal('Success', 'Animal created successfully!');
+              // Reset form after successful animal creation
+              resetForm();
+            },
+            onError: (error) => {
+              hideModal(); // Hide loading modal
+              showErrorModal('Error', `Failed to create animal: ${error.message}`);
+            }
+          }
+        );
       }
     } catch (error) {
       console.error('Error:', error);
-      Alert.alert('Error', `Failed to ${editMode ? 'update' : 'create'} animal listing`);
+      hideModal(); // Hide loading modal
+      showErrorModal('Error', `Failed to ${editMode ? 'update' : 'create'} animal listing`);
     } finally {
       setIsLoading(false);
     }
@@ -138,7 +250,7 @@ const AddAnimalScreen = ({ navigation, route }) => {
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
       
       if (permissionResult.granted === false) {
-        Alert.alert('Permission Required', 'You need to grant camera roll permissions to upload images.');
+        showErrorModal('Permission Required', 'You need to grant camera roll permissions to upload images.');
         return;
       }
       
@@ -161,7 +273,7 @@ const AddAnimalScreen = ({ navigation, route }) => {
       }
     } catch (error) {
       console.error('Error picking image:', error);
-      Alert.alert('Error', 'Failed to pick image. Please try again.');
+      showErrorModal('Error', 'Failed to pick image. Please try again.');
     }
   };
 
@@ -205,13 +317,6 @@ const AddAnimalScreen = ({ navigation, route }) => {
     
     return null;
   };
-
-  // Update navigation title based on mode
-  useEffect(() => {
-    navigation.setOptions({
-      title: editMode ? 'Edit Animal' : 'Add New Animal'
-    });
-  }, [navigation, editMode]);
 
   return (
     <LinearGradient
@@ -289,7 +394,7 @@ const AddAnimalScreen = ({ navigation, route }) => {
                   style={styles.input}
                   placeholder="Enter age in years"
                   placeholderTextColor="#aaa"
-                  value={formData.age.toString() || ''}
+                  value={formData.age}
                   onChangeText={(text) => updateFormField('age', text)}
                   keyboardType="numeric"
                 />
@@ -327,7 +432,7 @@ const AddAnimalScreen = ({ navigation, route }) => {
             <TouchableOpacity
               style={styles.addButton}
               onPress={handleAddAnimal}
-              disabled={isLoading}
+              disabled={isLoading || isCreating || isUpdating}
             >
               <LinearGradient
                 colors={['#a58fd8', '#8e74ae', '#7d5da7']}
@@ -335,7 +440,7 @@ const AddAnimalScreen = ({ navigation, route }) => {
                 end={{ x: 1, y: 0 }}
                 style={styles.addButton}
               >
-                {isLoading ? (
+                {isLoading || isCreating || isUpdating ? (
                   <ActivityIndicator color="#fff" size="small" />
                 ) : (
                   <Text style={styles.addButtonText}>

@@ -1,96 +1,99 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Alert } from 'react-native';
 import supabase from '../config/supabase';
-import { useAuth } from '../context/AuthContext';
-import StorageService from '../services/storageService';
-import { generateUniqueFileName } from '../utils/imageUtils';
+import { v4 as uuidv4 } from 'uuid';
 import { decode } from 'base64-arraybuffer';
+import 'react-native-get-random-values';
+import { useModalContext } from '../components/modals';
+
+// Helper function to get authenticated user
+const getUser = async () => {
+  const { data } = await supabase.auth.getSession();
+  return data?.session?.user;
+};
 
 /**
  * Hook to create a new animal
  */
 export const useCreateAnimal = (navigation) => {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
-  
+  const { showSuccessModal, showErrorModal } = useModalContext();
+
   return useMutation({
     mutationFn: async ({ animalData, imageData }) => {
-      if (!user?.id) throw new Error('User not authenticated');
-      
-      try {
-        // Upload image first if provided
-        let imageUrl = null;
-        
-        if (imageData?.base64) {
-          try {
-            // Use a simpler, direct upload approach
-            const fileName = `animal_${Date.now()}.jpg`;
-            
-            // Upload using direct Supabase call
-            const { data, error } = await supabase.storage
-              .from('animals')
-              .upload(fileName, decode(imageData.base64), {
-                contentType: 'image/jpeg',
-                upsert: true
-              });
-              
-            if (error) {
-              console.error("Direct upload failed:", error);
-            } else {
-              // Get public URL
-              const { data: urlData } = supabase.storage
-                .from('animals')
-                .getPublicUrl(fileName);
-                
-              imageUrl = urlData.publicUrl;
-            }
-          } catch (imageError) {
-            console.error("Image upload failed:", imageError);
-            // Proceed without image if upload fails
-          }
-        }
-        
-        // Create animal record - with only the fields that exist in the database
-        const { data, error } = await supabase
-          .from('animals')
-          .insert([{
-            name: animalData.name,
-            species: animalData.species,
-            breed: animalData.breed,
-            age: animalData.age,
-            description: animalData.description, 
-            user_id: user.id,
-            image_url: imageUrl || animalData.image_url,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            is_adopted: false
-          }])
-          .select()
-          .single();
-        
-        if (error) throw error;
-        
-        return data;
-      } catch (error) {
-        console.error('Error creating animal:', error);
-        throw error;
+      // Get the current authenticated user
+      const user = await getUser();
+      if (!user) {
+        throw new Error('You must be logged in to create an animal listing');
       }
+
+      // Initialize image URL as null
+      let imageUrl = null;
+
+      // Upload image if provided
+      if (imageData && imageData.base64) {
+        try {
+          // Create a unique filename with extension
+          const filename = `${uuidv4()}.jpg`;
+          const filePath = `${user.id}/${filename}`;
+
+          // Convert base64 to Uint8Array for upload
+          const base64Data = imageData.base64;
+          const binaryData = decode(base64Data);
+          
+          // Upload the image to Supabase Storage
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('animals')
+            .upload(filePath, binaryData, {
+              contentType: 'image/jpeg',
+            });
+
+          if (uploadError) {
+            console.error('Image upload failed:', uploadError);
+            throw new Error(`Image upload failed: ${uploadError.message}`);
+          }
+
+          // Get public URL for the uploaded image
+          const { data: publicUrlData } = supabase.storage
+            .from('animals')
+            .getPublicUrl(filePath);
+
+          imageUrl = publicUrlData.publicUrl;
+        } catch (error) {
+          console.error('Error in image upload:', error);
+          throw new Error(`Image upload error: ${error.message}`);
+        }
+      }
+
+      // Create the animal record with the image URL if available
+      const { data, error } = await supabase
+        .from('animals')
+        .insert([{
+          ...animalData,
+          user_id: user.id,
+          image_url: imageUrl, // Use the uploaded image URL or null
+        }])
+        .select();
+
+      if (error) {
+        console.error('Error creating animal:', error);
+        throw new Error(`Animal creation failed: ${error.message}`);
+      }
+
+      return data[0];
     },
     onSuccess: (data) => {
-      // Invalidate relevant queries
+      // Invalidate queries to force refetch
       queryClient.invalidateQueries({ queryKey: ['animals'] });
-      queryClient.invalidateQueries({ queryKey: ['userProfile', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['userAnimals'] });
       
-      Alert.alert('Success', 'Animal created successfully!');
-      
-      // Navigate to the animal detail screen
-      if (navigation) {
-        navigation.navigate('AnimalDetail', { animal: data });
-      }
+      // Component should handle success notification via modal
+      console.log('Animal created successfully:', data);
     },
     onError: (error) => {
-      Alert.alert('Error', `Failed to create animal: ${error.message}`);
-    }
+      // Component should handle error notification via modal
+      console.error('Animal creation error:', error);
+    },
   });
 };
 
@@ -99,86 +102,87 @@ export const useCreateAnimal = (navigation) => {
  */
 export const useUpdateAnimal = (navigation) => {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
   
   return useMutation({
     mutationFn: async ({ animalId, animalData, imageData }) => {
-      if (!user?.id) throw new Error('User not authenticated');
-      
-      try {
-        // Upload new image if provided
-        let imageUrl = animalData.image_url;
-        
-        if (imageData?.base64) {
-          try {
-            // Use a simpler, direct upload approach
-            const fileName = `animal_${animalId}_${Date.now()}.jpg`;
-            
-            // Upload using direct Supabase call
-            const { data, error } = await supabase.storage
-              .from('animals')
-              .upload(fileName, decode(imageData.base64), {
-                contentType: 'image/jpeg',
-                upsert: true
-              });
-              
-            if (error) {
-              console.error("Direct upload failed:", error);
-            } else {
-              // Get public URL
-              const { data: urlData } = supabase.storage
-                .from('animals')
-                .getPublicUrl(fileName);
-                
-              imageUrl = urlData.publicUrl;
-            }
-          } catch (imageError) {
-            console.error("Image upload failed:", imageError);
-            // Keep the existing image_url if upload fails
-          }
-        }
-        
-        // Update animal record with only fields that exist in the database
-        const { data, error } = await supabase
-          .from('animals')
-          .update({
-            name: animalData.name,
-            species: animalData.species,
-            breed: animalData.breed,
-            age: animalData.age,
-            description: animalData.description,
-            image_url: imageUrl,
-            updated_at: new Date().toISOString(),
-            is_adopted: animalData.is_adopted
-          })
-          .eq('id', animalId)
-          .select()
-          .single();
-        
-        if (error) throw error;
-        
-        return data;
-      } catch (error) {
-        console.error('Error updating animal:', error);
-        throw error;
+      // Verify we have an animal ID
+      if (!animalId) {
+        throw new Error('Animal ID is required for updates');
       }
+
+      // Get the current authenticated user
+      const user = await getUser();
+      if (!user) {
+        throw new Error('You must be logged in to update an animal listing');
+      }
+
+      // Prepare update data with existing fields
+      const updateData = { ...animalData };
+
+      // Upload a new image if provided
+      if (imageData && imageData.base64) {
+        try {
+          // Create a unique filename with extension
+          const filename = `${uuidv4()}.jpg`;
+          const filePath = `${user.id}/${filename}`;
+          
+          // Convert base64 to Uint8Array for upload
+          const base64Data = imageData.base64;
+          const binaryData = decode(base64Data);
+          
+          // Upload the image to Supabase Storage
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('animals')
+            .upload(filePath, binaryData, {
+              contentType: 'image/jpeg',
+            });
+
+          if (uploadError) {
+            console.error('Image upload failed:', uploadError);
+            throw new Error(`Image upload failed: ${uploadError.message}`);
+          }
+
+          // Get public URL for the uploaded image
+          const { data: publicUrlData } = supabase.storage
+            .from('animals')
+            .getPublicUrl(filePath);
+          
+          // Update the image URL in our data
+          updateData.image_url = publicUrlData.publicUrl;
+        } catch (error) {
+          console.error('Error in image upload:', error);
+          throw new Error(`Image upload error: ${error.message}`);
+        }
+      }
+
+      // Update the animal record
+      const { data, error } = await supabase
+        .from('animals')
+        .update(updateData)
+        .eq('id', animalId)
+        .eq('user_id', user.id) // Ensure we only update owned records (RLS should enforce this too)
+        .select();
+
+      if (error) {
+        console.error('Error updating animal:', error);
+        throw new Error(`Animal update failed: ${error.message}`);
+      }
+
+      return data[0];
     },
     onSuccess: (data) => {
-      // Invalidate relevant queries
+      // Invalidate queries to force refetch
       queryClient.invalidateQueries({ queryKey: ['animals'] });
       queryClient.invalidateQueries({ queryKey: ['animal', data.id] });
-      queryClient.invalidateQueries({ queryKey: ['userProfile', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['userAnimals'] });
       
-      Alert.alert('Success', 'Animal updated successfully!');
-      
-      // Navigate to the animal detail screen
-      if (navigation) {
-        navigation.navigate('AnimalDetail', { animal: data });
-      }
+      // Component should handle success notification via modal
+      console.log('Animal updated successfully:', data);
     },
     onError: (error) => {
-      Alert.alert('Error', `Failed to update animal: ${error.message}`);
-    }
+      // Component should handle error notification via modal
+      console.error('Animal update error:', error);
+    },
   });
 };
 
@@ -187,102 +191,97 @@ export const useUpdateAnimal = (navigation) => {
  */
 export const useDeleteAnimal = (navigation) => {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
   
   return useMutation({
     mutationFn: async (animalId) => {
-      if (!user?.id) throw new Error('User not authenticated');
-      
-      try {
-        // Delete animal record with user_id check to satisfy RLS policies
-        const { error } = await supabase
-          .from('animals')
-          .delete()
-          .eq('id', animalId)
-          .eq('user_id', user.id);
-        
-        if (error) {
-          console.error('Supabase delete error:', error);
-          throw error;
-        }
-        
-        // Double check if deletion worked by trying to fetch the animal
-        const { data: checkData } = await supabase
-          .from('animals')
-          .select('id')
-          .eq('id', animalId)
-          .single();
-          
-        if (checkData) {
-          console.warn('Animal still exists after deletion attempt');
-          throw new Error('Failed to delete animal - record still exists');
-        }
-        
-        return { success: true };
-      } catch (error) {
+      if (!animalId) {
+        throw new Error('Animal ID is required for deletion');
+      }
+
+      // Get the current authenticated user
+      const user = await getUser();
+      if (!user) {
+        throw new Error('You must be logged in to delete an animal listing');
+      }
+
+      // Delete the animal record
+      const { data, error } = await supabase
+        .from('animals')
+        .delete()
+        .eq('id', animalId)
+        .eq('user_id', user.id) // Ensure we only delete owned records (RLS should enforce this too)
+        .select();
+
+      if (error) {
         console.error('Error deleting animal:', error);
-        throw error;
+        throw new Error(`Animal deletion failed: ${error.message}`);
       }
+
+      return { success: true, animalId };
     },
-    onSuccess: () => {
-      // Invalidate relevant queries
+    onSuccess: (result) => {
+      // Invalidate queries to force refetch
       queryClient.invalidateQueries({ queryKey: ['animals'] });
-      queryClient.invalidateQueries({ queryKey: ['userProfile', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['userAnimals'] });
       
-      Alert.alert('Success', 'Animal deleted successfully!');
-      
-      // Navigate back to the profile screen
-      if (navigation) {
-        navigation.navigate('Profile');
-      }
+      // Component should handle success notification via modal
+      console.log('Animal deleted successfully:', result);
     },
     onError: (error) => {
-      Alert.alert('Error', `Failed to delete animal: ${error.message}`);
-    }
+      // Component should handle error notification via modal
+      console.error('Animal deletion error:', error);
+    },
   });
 };
 
 /**
- * Hook to mark an animal as adopted
+ * Hook for marking an animal as adopted
  */
 export const useAdoptAnimal = () => {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
   
   return useMutation({
     mutationFn: async (animalId) => {
-      if (!user?.id) throw new Error('User not authenticated');
+      console.log('Adopting animal with ID:', animalId);
       
-      try {
-        // Update animal record
-        const { data, error } = await supabase
-          .from('animals')
-          .update({
-            is_adopted: true,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', animalId)
-          .select()
-          .single();
-        
-        if (error) throw error;
-        
-        return data;
-      } catch (error) {
-        console.error('Error adopting animal:', error);
-        throw error;
+      if (!animalId) {
+        throw new Error('Animal ID is required');
       }
+
+      // Get the current authenticated user
+      const user = await getUser();
+      if (!user) {
+        throw new Error('You must be logged in to mark an animal as adopted');
+      }
+
+      // Update the animal's adoption status
+      const { data, error } = await supabase
+        .from('animals')
+        .update({ is_adopted: true })
+        .eq('id', animalId)
+        .eq('user_id', user.id) // Ensure we only update owned records (RLS should enforce this too)
+        .select();
+
+      if (error) {
+        console.error('Error marking animal as adopted:', error);
+        throw new Error(`Failed to mark as adopted: ${error.message}`);
+      }
+
+      // If no data is returned (which shouldn't happen), create a minimal object with the ID
+      return data && data.length > 0 ? data[0] : { id: animalId, is_adopted: true };
     },
     onSuccess: (data) => {
-      // Invalidate relevant queries
-      queryClient.invalidateQueries({ queryKey: ['animals'] });
-      queryClient.invalidateQueries({ queryKey: ['animal', data.id] });
-      queryClient.invalidateQueries({ queryKey: ['userProfile', user?.id] });
+      console.log('Animal adoption succeeded:', data);
       
-      Alert.alert('Success', 'Animal marked as adopted!');
+      // Invalidate queries to force refetch
+      queryClient.invalidateQueries({ queryKey: ['animals'] });
+      if (data && data.id) {
+        queryClient.invalidateQueries({ queryKey: ['animal', data.id] });
+      }
+      queryClient.invalidateQueries({ queryKey: ['userAnimals'] });
     },
     onError: (error) => {
-      Alert.alert('Error', `Failed to adopt animal: ${error.message}`);
-    }
+      console.error('Error marking animal as adopted:', error);
+    },
   });
 }; 

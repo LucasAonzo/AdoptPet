@@ -352,6 +352,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   // Owner Controls
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 30,
+  },
   ownerControlsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -391,6 +396,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 12,
+  },
+  editButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  deleteButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   buttonContent: {
     flexDirection: 'row',
