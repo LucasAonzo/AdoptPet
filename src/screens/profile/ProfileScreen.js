@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -14,14 +14,36 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
-import supabase from '../../config/supabase';
 import defaultAvatarBase64 from '../../../assets/defaultAvatar';
+import { useAuth } from '../../context/AuthContext';
+import { useFocusEffect } from '@react-navigation/native';
+import { useUserProfile, useUpdateProfile, useDebugUserData } from '../../hooks/useUserProfile';
+import { useQueryClient } from '@tanstack/react-query';
 
 const ProfileScreen = ({ navigation }) => {
-  const [user, setUser] = useState(null);
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [updating, setUpdating] = useState(false);
+  const { user: authUser, signOut } = useAuth();
+  const queryClient = useQueryClient();
+  
+  // Use React Query hooks
+  const { 
+    data: userData, 
+    isLoading, 
+    isRefetching,
+    refetch 
+  } = useUserProfile();
+  
+  const { 
+    mutate: updateProfile, 
+    isPending: isUpdating 
+  } = useUpdateProfile();
+  
+  const {
+    data: debugData,
+    refetch: debugRefetch,
+    isRefetching: isDebugRefetching
+  } = useDebugUserData();
+  
+  // Local state
   const [editMode, setEditMode] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -30,89 +52,32 @@ const ProfileScreen = ({ navigation }) => {
     bio: '',
   });
   const [profileImage, setProfileImage] = useState(null);
-  const [myAnimals, setMyAnimals] = useState([]);
-  const [adoptedAnimals, setAdoptedAnimals] = useState([]);
 
-  useEffect(() => {
-    fetchUserData();
-    
-    // Subscribe to auth changes
-    const { data: authListener } = supabase.auth.onAuthStateChange(() => {
-      fetchUserData();
-    });
-    
-    return () => {
-      if (authListener && authListener.subscription) {
-        authListener.subscription.unsubscribe();
-      }
-    };
-  }, []);
+  // Extract data from the query result
+  const profile = userData?.profile || null;
+  const myAnimals = userData?.myAnimals || [];
+  const adoptedAnimals = userData?.adoptedAnimals || [];
 
-  const fetchUserData = async () => {
-    try {
-      setLoading(true);
+  // Update form data when profile changes
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('Profile screen focused, refreshing data...');
+      refetch();
       
-      // Get current user
-      const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser();
-      
-      if (userError || !currentUser) {
-        throw new Error('User not authenticated');
-      }
-      
-      setUser(currentUser);
-      
-      // Get user profile
-      const { data: profileData, error: profileError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', currentUser.id)
-        .single();
-      
-      if (profileError && profileError.code !== 'PGRST116') {
-        throw profileError;
-      }
-      
-      if (profileData) {
-        setProfile(profileData);
+      if (profile) {
         setFormData({
-          name: profileData.name || '',
-          phone: profileData.phone || '',
-          address: profileData.address || '',
-          bio: profileData.bio || '',
+          name: profile.name || '',
+          phone: profile.phone || '',
+          address: profile.address || '',
+          bio: profile.bio || '',
         });
       }
       
-      // Get animals posted by user
-      const { data: postedAnimals, error: postedError } = await supabase
-        .from('animals')
-        .select('*')
-        .eq('user_id', currentUser.id);
-      
-      if (postedError) throw postedError;
-      setMyAnimals(postedAnimals || []);
-      
-      // Get animals adopted by user - filtering client-side for now
-      // We'll assume animals where is_adopted = true and the current user has created are their adopted animals
-      // In a full implementation, you'd have a separate adoptions table
-      const { data: allAnimals, error: allAnimalsError } = await supabase
-        .from('animals')
-        .select('*')
-        .eq('is_adopted', true);
-      
-      if (allAnimalsError) throw allAnimalsError;
-      // For now, we'll just show adopted animals (assuming the current user's animals that are marked as adopted)
-      const adoptedByCurrentUser = allAnimals ? allAnimals.filter(animal => 
-        animal.user_id === currentUser.id && animal.is_adopted
-      ) : [];
-      setAdoptedAnimals(adoptedByCurrentUser);
-      
-    } catch (error) {
-      console.error('Error fetching user data:', error);
-      Alert.alert('Error', 'Failed to load profile data');
-    } finally {
-      setLoading(false);
-    }
-  };
+      return () => {
+        // Cleanup function when screen loses focus
+      };
+    }, [profile, refetch])
+  );
 
   const handleInputChange = (field, value) => {
     setFormData({
@@ -147,82 +112,40 @@ const ProfileScreen = ({ navigation }) => {
     }
   };
 
-  const uploadProfileImage = async () => {
-    if (!profileImage?.base64) return null;
-    
-    try {
-      const fileName = `profile_${user.id}_${Date.now()}.jpg`;
-      const contentType = 'image/jpeg';
-      const base64FileData = profileImage.base64;
-      
-      const { data, error } = await supabase.storage
-        .from('profile_images')
-        .upload(fileName, decode(base64FileData), {
-          contentType,
-          upsert: true,
-        });
-      
-      if (error) throw error;
-      
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('profile_images')
-        .getPublicUrl(fileName);
-      
-      return publicUrl;
-    } catch (error) {
-      console.error('Error uploading profile image:', error);
-      throw error;
-    }
-  };
-
-  const handleSaveProfile = async () => {
-    try {
-      setUpdating(true);
-      
-      let profileImageUrl = profile?.avatar_url;
-      
-      // Upload new profile image if selected
-      if (profileImage) {
-        profileImageUrl = await uploadProfileImage();
-      }
-      
-      // Update profile in database
-      const { error } = await supabase
-        .from('users')
-        .update({
-          name: formData.name,
-          phone: formData.phone,
-          address: formData.address,
-          bio: formData.bio,
-          avatar_url: profileImageUrl,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', user.id);
-      
-      if (error) throw error;
-      
-      // Refresh profile data
-      await fetchUserData();
-      
-      setEditMode(false);
-      Alert.alert('Success', 'Profile updated successfully');
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      Alert.alert('Error', 'Failed to update profile. Please try again.');
-    } finally {
-      setUpdating(false);
-    }
+  const handleSaveProfile = () => {
+    updateProfile({
+      formData: {
+        ...formData,
+        avatar_url: profile?.avatar_url
+      },
+      profileImage
+    });
+    setEditMode(false);
   };
 
   const handleLogout = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      const success = await signOut();
+      if (!success) {
+        Alert.alert('Error', 'Failed to sign out. Please try again.');
+      }
     } catch (error) {
       console.error('Error signing out:', error);
       Alert.alert('Error', 'Failed to sign out. Please try again.');
     }
+  };
+
+  const debugUserData = () => {
+    debugRefetch().then(result => {
+      if (result.data?.success) {
+        Alert.alert(
+          'Debug Info', 
+          `User ID: ${result.data.userId}\nAnimals found: ${result.data.animalsCount}`
+        );
+      } else {
+        Alert.alert('Debug Error', result.data?.message || 'Failed to fetch debug data');
+      }
+    });
   };
 
   const renderAnimalItem = (animal) => {
@@ -247,7 +170,7 @@ const ProfileScreen = ({ navigation }) => {
     );
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#8e74ae" />
@@ -293,7 +216,7 @@ const ProfileScreen = ({ navigation }) => {
             {!editMode ? (
               <>
                 <Text style={styles.userName}>{profile?.name || 'User'}</Text>
-                <Text style={styles.userEmail}>{user?.email}</Text>
+                <Text style={styles.userEmail}>{authUser?.email}</Text>
                 
                 <View style={styles.statsContainer}>
                   <View style={styles.stat}>
@@ -363,7 +286,7 @@ const ProfileScreen = ({ navigation }) => {
               <TouchableOpacity
                 style={styles.saveButton}
                 onPress={handleSaveProfile}
-                disabled={updating}
+                disabled={isUpdating}
               >
                 <LinearGradient
                   colors={['#a58fd8', '#8e74ae', '#7d5da7']}
@@ -371,7 +294,7 @@ const ProfileScreen = ({ navigation }) => {
                   end={{ x: 1, y: 0 }}
                   style={styles.saveButtonGradient}
                 >
-                  {updating ? (
+                  {isUpdating ? (
                     <ActivityIndicator size="small" color="white" />
                   ) : (
                     <>
@@ -399,7 +322,7 @@ const ProfileScreen = ({ navigation }) => {
                   <Ionicons name="mail-outline" size={20} color="#8e74ae" />
                   <Text style={styles.detailLabel}>Email:</Text>
                 </View>
-                <Text style={styles.detailValue}>{user?.email}</Text>
+                <Text style={styles.detailValue}>{authUser?.email}</Text>
               </View>
               
               <View style={styles.detailRow}>
@@ -480,7 +403,20 @@ const ProfileScreen = ({ navigation }) => {
         
         {/* My Animals Section */}
         <View style={styles.animalsSection}>
-          <Text style={styles.sectionTitle}>My Animals</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>My Animals</Text>
+            <TouchableOpacity 
+              style={styles.refreshButton}
+              onPress={() => refetch()}
+              disabled={isRefetching}
+            >
+              {isRefetching ? (
+                <ActivityIndicator size="small" color="#8e74ae" />
+              ) : (
+                <Ionicons name="refresh-outline" size={20} color="#8e74ae" />
+              )}
+            </TouchableOpacity>
+          </View>
           
           {myAnimals.length === 0 ? (
             <View style={styles.emptyStateContainer}>
@@ -512,7 +448,20 @@ const ProfileScreen = ({ navigation }) => {
         
         {/* Adopted Animals Section */}
         <View style={styles.animalsSection}>
-          <Text style={styles.sectionTitle}>Adopted Animals</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Adopted Animals</Text>
+            <TouchableOpacity 
+              style={styles.refreshButton}
+              onPress={() => refetch()}
+              disabled={isRefetching}
+            >
+              {isRefetching ? (
+                <ActivityIndicator size="small" color="#8e74ae" />
+              ) : (
+                <Ionicons name="refresh-outline" size={20} color="#8e74ae" />
+              )}
+            </TouchableOpacity>
+          </View>
           
           {adoptedAnimals.length === 0 ? (
             <View style={styles.emptyStateContainer}>
@@ -535,6 +484,15 @@ const ProfileScreen = ({ navigation }) => {
         >
           <Ionicons name="log-out-outline" size={20} color="#8e74ae" />
           <Text style={styles.logoutButtonText}>Log Out</Text>
+        </TouchableOpacity>
+        
+        {/* Debug Button - only visible in development */}
+        <TouchableOpacity
+          style={styles.debugButton}
+          onPress={debugUserData}
+        >
+          <Ionicons name="bug-outline" size={20} color="#8e74ae" />
+          <Text style={styles.debugButtonText}>Debug Data</Text>
         </TouchableOpacity>
       </ScrollView>
     </LinearGradient>
@@ -742,7 +700,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#8e74ae',
-    marginBottom: 20,
+    marginBottom: 15,
   },
   detailsContainer: {
     paddingHorizontal: 5,
@@ -835,6 +793,18 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 4,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  refreshButton: {
+    padding: 8,
+    borderWidth: 1,
+    borderColor: '#8e74ae',
+    borderRadius: 8,
+  },
   emptyStateContainer: {
     alignItems: 'center',
     padding: 20,
@@ -921,6 +891,23 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(142, 116, 174, 0.05)',
   },
   logoutButtonText: {
+    marginLeft: 8,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#8e74ae',
+  },
+  debugButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#8e74ae',
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 10,
+    backgroundColor: 'rgba(142, 116, 174, 0.05)',
+  },
+  debugButtonText: {
     marginLeft: 8,
     fontSize: 16,
     fontWeight: '600',

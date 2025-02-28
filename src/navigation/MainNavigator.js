@@ -41,8 +41,13 @@ const MainNavigator = () => {
                 headerTitle: 'Animal Details',
                 headerTitleStyle: {
                   fontWeight: 'bold',
-                  fontSize: 18
+                  fontSize: 20,
+                  color: '#fff'
                 },
+                headerStyle: {
+                  backgroundColor: '#8e74ae',
+                },
+                headerTintColor: '#fff',
               }}
             />
           </>

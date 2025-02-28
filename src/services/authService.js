@@ -23,24 +23,52 @@ const AuthService = {
 
       // If signup was successful, create a user profile in the users table
       if (authData?.user) {
-        const { error: profileError } = await supabase
+        console.log('Creating user profile for:', authData.user.id);
+        
+        // Check if user already exists in the users table
+        const { data: existingUser, error: checkError } = await supabase
           .from('users')
-          .insert([{
-            id: authData.user.id,
-            email: email,
-            name: userData.name || '',
-            profile_picture: userData.profile_picture || '',
-            bio: userData.bio || ''
-          }]);
+          .select('id')
+          .eq('id', authData.user.id)
+          .single();
+          
+        if (checkError && checkError.code !== 'PGRST116') {
+          console.error('Error checking if user exists:', checkError);
+        }
+        
+        // Only create a new user if they don't already exist
+        if (!existingUser) {
+          const { data: profileData, error: profileError } = await supabase
+            .from('users')
+            .insert([{
+              id: authData.user.id,
+              email: email,
+              name: userData.name || '',
+              profile_picture: userData.profile_picture || '',
+              bio: userData.bio || '',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            }])
+            .select();
 
-        if (profileError) {
-          console.error('Error creating user profile:', profileError);
-          // Even if profile creation fails, return auth success
-          return { 
-            success: true, 
-            user: authData.user,
-            warning: 'Authentication successful but profile creation failed'
-          };
+          if (profileError) {
+            console.error('Error creating user profile:', profileError);
+            console.error('Profile data attempted:', {
+              id: authData.user.id,
+              email: email,
+              name: userData.name || ''
+            });
+            // Even if profile creation fails, return auth success
+            return { 
+              success: true, 
+              user: authData.user,
+              warning: 'Authentication successful but profile creation failed: ' + profileError.message
+            };
+          }
+          
+          console.log('User profile created successfully:', profileData);
+        } else {
+          console.log('User profile already exists, skipping creation');
         }
       }
 

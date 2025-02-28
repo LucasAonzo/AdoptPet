@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../context/AuthContext';
 import AnimalService from '../../services/animalService';
+import supabase from '../../config/supabase';
 
 const AddAnimalScreen = ({ navigation }) => {
   const { user } = useAuth();
@@ -60,6 +61,37 @@ const AddAnimalScreen = ({ navigation }) => {
 
     setLoading(true);
     try {
+      // First, check if the user exists in the users table
+      const { data: userData, error: userCheckError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('id', user.id)
+        .single();
+      
+      // If user doesn't exist in the users table, create them
+      if (userCheckError && userCheckError.code === 'PGRST116') {
+        console.log('User not found in users table, creating user record...');
+        const { error: createUserError } = await supabase
+          .from('users')
+          .insert([{
+            id: user.id,
+            email: user.email,
+            name: user.user_metadata?.name || '',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }]);
+        
+        if (createUserError) {
+          console.error('Error creating user record:', createUserError);
+          Alert.alert('Error', 'Failed to create user record. Please try again.');
+          setLoading(false);
+          return;
+        }
+      } else if (userCheckError) {
+        console.error('Error checking user:', userCheckError);
+      }
+
+      // Now create the animal
       const result = await AnimalService.createAnimal(animalData);
       setLoading(false);
 
