@@ -194,13 +194,29 @@ export const useDeleteAnimal = (navigation) => {
       if (!user?.id) throw new Error('User not authenticated');
       
       try {
-        // Delete animal record
+        // Delete animal record with user_id check to satisfy RLS policies
         const { error } = await supabase
           .from('animals')
           .delete()
-          .eq('id', animalId);
+          .eq('id', animalId)
+          .eq('user_id', user.id);
         
-        if (error) throw error;
+        if (error) {
+          console.error('Supabase delete error:', error);
+          throw error;
+        }
+        
+        // Double check if deletion worked by trying to fetch the animal
+        const { data: checkData } = await supabase
+          .from('animals')
+          .select('id')
+          .eq('id', animalId)
+          .single();
+          
+        if (checkData) {
+          console.warn('Animal still exists after deletion attempt');
+          throw new Error('Failed to delete animal - record still exists');
+        }
         
         return { success: true };
       } catch (error) {
