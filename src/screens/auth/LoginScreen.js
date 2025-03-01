@@ -13,12 +13,13 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
+import { GOOGLE_LOGO_BASE64 } from '../../../assets/googleLogo';
 import styles from './LoginScreen.styles';
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { signIn, loading } = useAuth();
+  const { signIn, signInWithGoogle, loading } = useAuth();
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -30,6 +31,24 @@ const LoginScreen = ({ navigation }) => {
     if (success) {
       // The auth context will automatically update and redirect to main app
       console.log('Login successful!');
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      const success = await signInWithGoogle();
+      if (success) {
+        // The auth.signInWithGoogle will handle the redirect and alert
+        console.log('Google login initiated successfully');
+      } else {
+        console.log('Google login failed');
+      }
+    } catch (error) {
+      console.error('Error in Google login:', error);
+      Alert.alert(
+        'Google Login Error',
+        'There was a problem connecting to Google. Please try again.'
+      );
     }
   };
 
@@ -97,6 +116,27 @@ const LoginScreen = ({ navigation }) => {
                   {loading ? 'Logging in...' : 'Log In'}
                 </Text>
               </LinearGradient>
+            </TouchableOpacity>
+            
+            <View style={styles.orContainer}>
+              <View style={styles.divider} />
+              <Text style={styles.orText}>OR</Text>
+              <View style={styles.divider} />
+            </View>
+            
+            <TouchableOpacity
+              style={styles.googleButton}
+              onPress={handleGoogleLogin}
+              disabled={loading}
+            >
+              <Image 
+                source={{ uri: GOOGLE_LOGO_BASE64 }} 
+                style={styles.googleIcon}
+                resizeMode="contain"
+              />
+              <Text style={styles.googleButtonText}>
+                Sign in with Google
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity

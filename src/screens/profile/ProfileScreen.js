@@ -61,7 +61,7 @@ const ProfileScreen = ({ navigation }) => {
   // Update form data when profile changes
   useFocusEffect(
     React.useCallback(() => {
-      console.log('Profile screen focused, refreshing data...');
+      
       refetch();
       
       if (profile) {

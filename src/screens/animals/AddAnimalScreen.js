@@ -201,7 +201,11 @@ const AddAnimalScreen = ({ navigation, route }) => {
           {
             onSuccess: (data) => {
               hideModal(); // Hide loading modal
-              showSuccessModal('Success', 'Animal created successfully!');
+              // Navigate to the success screen instead of showing a modal
+              navigation.navigate('PublicationSuccess', {
+                animalId: data.id,
+                animalName: data.name
+              });
               // Reset form after successful animal creation
               resetForm();
             },

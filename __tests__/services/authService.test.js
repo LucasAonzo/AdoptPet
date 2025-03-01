@@ -23,6 +23,7 @@ jest.mock('../../src/config/supabase', () => ({
     getSession: jest.fn(),
     getUser: jest.fn(),
     resetPasswordForEmail: jest.fn(),
+    signInWithOAuth: jest.fn(),
   },
   from: jest.fn().mockImplementation(() => ({
     insert: jest.fn().mockReturnValue({ error: null })
@@ -244,5 +245,61 @@ describe('Authentication Service Tests', () => {
     expect(result).toEqual({
       success: true,
     });
+  });
+
+  test('should sign in with Google successfully', async () => {
+    // Mock data
+    const mockAuthData = { url: 'https://google.oauth.redirect.url' };
+
+    // Mock the Supabase response
+    supabase.auth.signInWithOAuth.mockResolvedValue({
+      data: mockAuthData,
+      error: null,
+    });
+
+    // Execute the service function
+    const result = await AuthService.signInWithGoogle();
+
+    // Assertions
+    expect(supabase.auth.signInWithOAuth).toHaveBeenCalledWith({
+      provider: 'google',
+      options: {
+        redirectTo: 'https://naryyzfncswysrbrzizo.supabase.co/auth/v1/callback',
+      },
+    });
+    expect(result).toEqual({
+      success: true,
+      data: mockAuthData,
+    });
+  });
+
+  test('should handle Google sign in error', async () => {
+    // Mock error
+    const mockError = new Error('Google sign in failed');
+
+    // Spy on console.error
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    // Mock the Supabase response with error
+    supabase.auth.signInWithOAuth.mockResolvedValue({
+      data: null,
+      error: mockError,
+    });
+
+    // Execute the service function
+    const result = await AuthService.signInWithGoogle();
+
+    // Assertions
+    expect(supabase.auth.signInWithOAuth).toHaveBeenCalledWith({
+      provider: 'google',
+      options: {
+        redirectTo: 'https://naryyzfncswysrbrzizo.supabase.co/auth/v1/callback',
+      },
+    });
+    expect(result).toEqual({
+      success: false,
+      error: mockError,
+    });
+    expect(console.error).toHaveBeenCalledWith('Error in Google sign in:', mockError.message);
   });
 }); 

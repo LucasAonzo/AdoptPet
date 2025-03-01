@@ -27,7 +27,7 @@ export const AuthProvider = ({ children }) => {
         // Listen for auth changes
         const { data: authListener } = supabase.auth.onAuthStateChange(
           async (event, newSession) => {
-            console.log(`Auth state changed: ${event}`);
+            
             setSession(newSession);
             setUser(newSession?.user || null);
           }
@@ -132,6 +132,48 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Sign in with Google
+  const signInWithGoogle = async () => {
+    try {
+      setLoading(true);
+      console.log('Starting Google sign-in process...');
+      
+      const result = await AuthService.signInWithGoogle();
+      console.log('Google sign-in result:', result);
+      
+      if (!result.success) {
+        console.error('Google sign-in error:', result.error);
+        Alert.alert('Google Sign In Error', result.error.message);
+        return false;
+      }
+      
+      // For OAuth, we need to handle the URL opening differently
+      if (result.data?.url) {
+        console.log('Opening OAuth URL:', result.data.url);
+        
+        // For debugging - we'll alert the URL that should be opened
+        Alert.alert(
+          'OAuth Redirect',
+          `Please open this URL in your browser to complete Google login: ${result.data.url}`,
+          [
+            { 
+              text: 'OK', 
+              onPress: () => console.log('URL alert closed') 
+            }
+          ]
+        );
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Unexpected error in Google sign-in:', error);
+      Alert.alert('Google Sign In Error', error.message);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Define the value object to be provided by the context
   const value = {
     user,
@@ -141,6 +183,7 @@ export const AuthProvider = ({ children }) => {
     signUp,
     signOut,
     resetPassword,
+    signInWithGoogle,
     isAuthenticated: !!user
   };
 

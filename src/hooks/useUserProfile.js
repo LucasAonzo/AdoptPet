@@ -14,7 +14,7 @@ export const useUserProfile = () => {
   return useQuery({
     queryKey: ['userProfile', userId],
     queryFn: async () => {
-      console.log('Fetching profile data for user:', userId);
+      
       
       if (!userId) {
         console.log('No user ID available, skipping profile fetch');
@@ -59,7 +59,7 @@ export const useUserProfile = () => {
         }
         
         // Get animals posted by user
-        console.log('Fetching animals posted by user:', userId);
+        
         const { data: postedAnimals, error: postedError } = await supabase
           .from('animals')
           .select('*')
@@ -70,7 +70,7 @@ export const useUserProfile = () => {
           throw postedError;
         }
         
-        console.log('Found posted animals:', postedAnimals ? postedAnimals.length : 0);
+        
         
         // Get animals adopted by user
         const { data: allAnimals, error: allAnimalsError } = await supabase

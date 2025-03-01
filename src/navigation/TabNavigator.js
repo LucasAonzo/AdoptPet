@@ -8,6 +8,7 @@ import HomeScreen from '../screens/home/HomeScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
 import AddAnimalScreen from '../screens/animals/AddAnimalScreen';
 import AnimalDetailScreen from '../screens/animals/AnimalDetailScreen';
+import PublicationSuccessScreen from '../screens/animals/PublicationSuccessScreen';
 
 const Tab = createBottomTabNavigator();
 const HomeStack = createStackNavigator();
@@ -52,6 +53,15 @@ const HomeStackScreen = () => {
         component={AddAnimalScreen}
         options={{
           title: 'Edit Animal',
+        }}
+      />
+      <HomeStack.Screen
+        name="PublicationSuccess"
+        component={PublicationSuccessScreen}
+        options={{
+          title: 'Publication Success',
+          headerShown: false,
+          gestureEnabled: false
         }}
       />
     </HomeStack.Navigator>
@@ -108,6 +118,15 @@ const AddStackScreen = ({ navigation }) => {
             />
           )
         })}
+      />
+      <AddStack.Screen
+        name="PublicationSuccess"
+        component={PublicationSuccessScreen}
+        options={{
+          title: 'Publication Success',
+          headerShown: false,
+          gestureEnabled: false
+        }}
       />
     </AddStack.Navigator>
   );

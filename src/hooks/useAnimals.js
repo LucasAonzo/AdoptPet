@@ -11,7 +11,7 @@ export const useAnimals = ({ category = 'all', searchText = '' }) => {
   return useInfiniteQuery({
     queryKey: ['animals', category, searchText],
     queryFn: async ({ pageParam = 0 }) => {
-      console.log(`Fetching animals - category: ${category}, search: ${searchText}, page: ${pageParam}`);
+      
       
       // Calculate range for pagination
       const from = pageParam * PAGE_SIZE;
@@ -61,7 +61,7 @@ export const useAnimals = ({ category = 'all', searchText = '' }) => {
           throw new Error(error.message);
         }
         
-        console.log(`Retrieved ${data?.length || 0} animals, total count: ${count || 0}`);
+        
         if (data && data.length > 0) {
           
         }
@@ -89,7 +89,7 @@ export const useAnimal = (animalId) => {
   return useQuery({
     queryKey: ['animal', animalId],
     queryFn: async () => {
-      console.log(`Fetching animal details for ID: ${animalId}`);
+      
       
       try {
         const { data, error } = await supabase
@@ -106,7 +106,7 @@ export const useAnimal = (animalId) => {
           throw new Error(error.message);
         }
         
-        console.log(`Successfully retrieved animal ${animalId}`);
+        
         return data;
       } catch (error) {
         console.error(`Unexpected error in useAnimal for ID ${animalId}:`, error);

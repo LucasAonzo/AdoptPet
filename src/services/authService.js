@@ -174,6 +174,58 @@ const AuthService = {
       console.error('Error resetting password:', error.message);
       return { success: false, error };
     }
+  },
+
+  /**
+   * Sign in with Google OAuth
+   * @returns {Promise<Object>} - Result of the Google sign in operation
+   */
+  signInWithGoogle: async () => {
+    try {
+      console.log('Initiating Google OAuth sign-in process...');
+      
+      // Set up the OAuth options
+      const options = {
+        provider: 'google',
+        options: {
+          redirectTo: 'https://naryyzfncswysrbrzizo.supabase.co/auth/v1/callback',
+          skipBrowserRedirect: false,
+        },
+      };
+      
+      console.log('OAuth options:', JSON.stringify(options));
+      
+      // Trigger the OAuth flow
+      const { data, error } = await supabase.auth.signInWithOAuth(options);
+      
+      console.log('Supabase auth.signInWithOAuth response:', JSON.stringify(data || {}));
+      
+      if (error) {
+        console.error('Supabase OAuth error:', error);
+        throw error;
+      }
+      
+      // For mobile platforms, we need to open the URL manually
+      if (data?.url) {
+        console.log('OAuth URL to open:', data.url);
+        
+        // Try to use React Native's Linking API if available in this context
+        try {
+          const Linking = require('react-native').Linking;
+          console.log('Opening URL with Linking API...');
+          await Linking.openURL(data.url);
+          console.log('URL opened successfully');
+        } catch (openError) {
+          console.warn('Could not automatically open URL with Linking API:', openError);
+          // We'll return the URL so the caller can handle opening it
+        }
+      }
+      
+      return { success: true, data };
+    } catch (error) {
+      console.error('Error in Google sign in:', error.message);
+      return { success: false, error };
+    }
   }
 };
 
