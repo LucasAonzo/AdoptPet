@@ -1,15 +1,37 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import { cacheImage } from '../../utils/imageOptimizations';
 
 const AnimalCard = ({ animal, onPress }) => {
+  const [optimizedImageUri, setOptimizedImageUri] = useState(animal.image_url);
+  
+  // Cache the image when the component mounts
+  useEffect(() => {
+    const prepareImage = async () => {
+      if (animal.image_url) {
+        const cachedUri = await cacheImage(animal.image_url);
+        setOptimizedImageUri(cachedUri);
+      }
+    };
+    
+    prepareImage();
+  }, [animal.image_url]);
+  
+  // Use blurhash or placeholder while image loads
+  const placeholder = 'LJHfLTH?_3?b~qofRjWB%MogRjWB';
+
   return (
     <TouchableOpacity style={styles.petCard} onPress={onPress}>
       <View style={styles.imageContainer}>
         <Image
-          source={{ uri: animal.image_url }}
+          source={{ uri: optimizedImageUri }}
           style={styles.petImage}
-          resizeMode="cover"
+          contentFit="cover"
+          placeholder={placeholder}
+          transition={300}
+          cachePolicy="memory-disk"
         />
         {animal.is_adopted && (
           <View style={styles.adoptedBadge}>
@@ -58,7 +80,6 @@ const styles = StyleSheet.create({
   petImage: {
     width: '100%',
     height: 160,
-    resizeMode: 'cover',
   },
   adoptedBadge: {
     position: 'absolute',

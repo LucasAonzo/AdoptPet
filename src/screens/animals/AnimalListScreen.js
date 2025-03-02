@@ -18,7 +18,7 @@ const AnimalCard = ({ animal, onPress }) => {
       <Image
         source={{ uri: animal.image_url }}
         style={styles.cardImage}
-        resizeMode="cover"
+        contentFit="cover"
       />
       <View style={styles.cardContent}>
         <Text style={styles.cardTitle}>{animal.name}</Text>

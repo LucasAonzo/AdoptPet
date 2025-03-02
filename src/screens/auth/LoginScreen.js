@@ -30,7 +30,6 @@ const LoginScreen = ({ navigation }) => {
     const success = await signIn(email, password);
     if (success) {
       // The auth context will automatically update and redirect to main app
-      console.log('Login successful!');
     }
   };
 
@@ -39,9 +38,6 @@ const LoginScreen = ({ navigation }) => {
       const success = await signInWithGoogle();
       if (success) {
         // The auth.signInWithGoogle will handle the redirect and alert
-        console.log('Google login initiated successfully');
-      } else {
-        console.log('Google login failed');
       }
     } catch (error) {
       console.error('Error in Google login:', error);
@@ -132,7 +128,7 @@ const LoginScreen = ({ navigation }) => {
               <Image 
                 source={{ uri: GOOGLE_LOGO_BASE64 }} 
                 style={styles.googleIcon}
-                resizeMode="contain"
+                contentMode="contain"
               />
               <Text style={styles.googleButtonText}>
                 Sign in with Google

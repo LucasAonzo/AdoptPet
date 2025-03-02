@@ -92,16 +92,16 @@ const PublicationSuccessScreen = ({ navigation, route }) => {
         </View>
 
         {/* Success message */}
-        <Text style={styles.titleText}>Excellent!</Text>
+        <Text style={styles.titleText}>¡Excelente!</Text>
         <Text style={styles.messageText}>
-          Your listing was published successfully
+          Tu aviso fue publicado con éxito
         </Text>
 
         {/* Thank you message */}
         <View style={styles.thanksContainer}>
           <Text style={styles.thanksText}>
-            The pet will soon find a home.
-            Thank you for your help!
+            La mascota pronto conseguirá un hogar.
+            ¡Gracias por tu ayuda!
           </Text>
         </View>
 
@@ -118,7 +118,7 @@ const PublicationSuccessScreen = ({ navigation, route }) => {
               end={{ x: 1, y: 0 }}
               style={styles.gradientButton}
             >
-              <Text style={styles.primaryButtonText}>Return to Home</Text>
+              <Text style={styles.primaryButtonText}>Volver al inicio</Text>
             </LinearGradient>
           </TouchableOpacity>
 
@@ -130,7 +130,7 @@ const PublicationSuccessScreen = ({ navigation, route }) => {
             {isLoading ? (
               <ActivityIndicator color="#8e74ae" size="small" />
             ) : (
-              <Text style={styles.secondaryButtonText}>View Listing</Text>
+              <Text style={styles.secondaryButtonText}>Ver publicación</Text>
             )}
           </TouchableOpacity>
         </View>

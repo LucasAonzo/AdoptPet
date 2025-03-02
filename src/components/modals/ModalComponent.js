@@ -9,7 +9,7 @@ import {
   ActivityIndicator
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import GradientWrapper from '../common/GradientWrapper';
 
 /**
  * A reusable modal component for the AdoptMe app
@@ -34,15 +34,6 @@ const ModalComponent = ({
   cancelText = 'Cancel',
   hideCloseButton = false,
 }) => {
-  // Debug log
-  console.log('ModalComponent rendering with props:', {
-    visible,
-    type,
-    title,
-    message,
-    hideCloseButton
-  });
-
   // Get icon based on type
   const getIcon = () => {
     switch (type) {
@@ -87,14 +78,14 @@ const ModalComponent = ({
               }
             }}
           >
-            <LinearGradient
+            <GradientWrapper
               colors={['#a58fd8', '#8e74ae', '#7d5da7']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.confirmButtonGradient}
             >
               <Text style={styles.confirmButtonText}>{confirmText}</Text>
-            </LinearGradient>
+            </GradientWrapper>
           </TouchableOpacity>
         </View>
       );
@@ -112,14 +103,14 @@ const ModalComponent = ({
           }
         }}
       >
-        <LinearGradient
+        <GradientWrapper
           colors={['#a58fd8', '#8e74ae', '#7d5da7']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={styles.singleButtonGradient}
         >
           <Text style={styles.singleButtonText}>OK</Text>
-        </LinearGradient>
+        </GradientWrapper>
       </TouchableOpacity>
     );
   };

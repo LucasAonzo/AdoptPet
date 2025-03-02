@@ -1,13 +1,44 @@
 import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { ActivityIndicator, View, Platform, Linking } from 'react-native';
+import { ActivityIndicator, View, Platform, Linking, Text, TouchableOpacity } from 'react-native';
 import AuthNavigator from './AuthNavigator';
 import { useAuth } from '../context/AuthContext';
 import TabNavigator from './TabNavigator';
 import { handleAuthDeepLink, registerURLHandler } from '../utils/URLHandler';
+import ErrorBoundary from '../components/common/ErrorBoundary';
 
 const Stack = createStackNavigator();
+
+// Create navigation configuration with optimized settings
+const navigationConfig = {
+  // Transition animation configuration for smoother transitions
+  screenOptions: {
+    // Use a custom animation that performs better
+    transitionSpec: {
+      open: {
+        animation: 'timing',
+        config: {
+          duration: 250,
+          useNativeDriver: true,
+        },
+      },
+      close: {
+        animation: 'timing',
+        config: {
+          duration: 200,
+          useNativeDriver: true,
+        },
+      },
+    },
+    // Use a hardware accelerated animation
+    cardStyleInterpolator: ({ current }) => ({
+      cardStyle: {
+        opacity: current.progress,
+      },
+    }),
+  },
+};
 
 const MainNavigator = () => {
   const { isAuthenticated, loading } = useAuth();
@@ -36,7 +67,7 @@ const MainNavigator = () => {
     async getInitialURL() {
       // First, check if the app was opened via a deep link
       const url = await Linking.getInitialURL();
-      console.log('Initial URL:', url);
+      
       
       if (url !== null) {
         // Process any auth-related URLs
@@ -68,7 +99,7 @@ const MainNavigator = () => {
   useEffect(() => {
     // Add a listener for auth state changes through URL handling
     const handleURL = async (url) => {
-      console.log('Handling URL in effect:', url);
+     
       await handleAuthDeepLink(url);
     };
 
@@ -76,7 +107,7 @@ const MainNavigator = () => {
     const checkInitialURL = async () => {
       const url = await Linking.getInitialURL();
       if (url) {
-        console.log('App opened with initial URL:', url);
+        
         await handleURL(url);
       }
     };
@@ -100,23 +131,87 @@ const MainNavigator = () => {
     );
   }
 
-  return (
-    <NavigationContainer linking={linking}>
-      <Stack.Navigator
-        screenOptions={{
-          headerShown: false,
-          cardStyle: { backgroundColor: '#f8f8f8' },
+  // Create a fallback component for the ErrorBoundary
+  const navigationFallback = (
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+      <Text style={{ fontSize: 18, marginBottom: 20, textAlign: 'center' }}>
+        There was a problem loading the app. This could be due to a navigation error.
+      </Text>
+      <TouchableOpacity 
+        style={{ 
+          backgroundColor: '#8e74ae', 
+          paddingVertical: 10, 
+          paddingHorizontal: 20, 
+          borderRadius: 8 
+        }}
+        onPress={() => {
+          // Try reloading the app
+          if (Platform.OS === 'web') {
+            window.location.reload();
+          } else {
+            // For native, we can't really reload, but we can try to reset state
+            console.log('Attempting to reset app state');
+          }
         }}
       >
-        {isAuthenticated ? (
-          // User is signed in
-          <Stack.Screen name="Main" component={TabNavigator} />
-        ) : (
-          // User is not signed in
-          <Stack.Screen name="Auth" component={AuthNavigator} />
-        )}
-      </Stack.Navigator>
-    </NavigationContainer>
+        <Text style={{ color: 'white', fontSize: 16 }}>Reload App</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  return (
+    <ErrorBoundary fallback={navigationFallback}>
+      <NavigationContainer 
+        linking={linking}
+        // Add performance optimizations
+        theme={{
+          dark: false,
+          colors: {
+            primary: '#8e74ae',
+            background: '#ffffff',
+            card: '#ffffff',
+            text: '#000000',
+            border: '#cccccc',
+            notification: '#ff3b30',
+          },
+        }}
+        // Detach inactive screens to improve memory usage
+        detachInactiveScreens={true}
+      >
+        <Stack.Navigator
+          screenOptions={{
+            headerShown: false,
+            cardStyle: { backgroundColor: '#f8f8f8' },
+            // Add transition optimizations
+            animationEnabled: true,
+            detachPreviousScreen: !Platform.isPad,
+            // Use hardware acceleration for animations
+            cardStyleInterpolator: ({ current, layouts }) => {
+              return {
+                cardStyle: {
+                  transform: [
+                    {
+                      translateX: current.progress.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [layouts.screen.width, 0],
+                      }),
+                    },
+                  ],
+                },
+              };
+            },
+          }}
+        >
+          {isAuthenticated ? (
+            // User is signed in
+            <Stack.Screen name="Main" component={TabNavigator} />
+          ) : (
+            // User is not signed in
+            <Stack.Screen name="Auth" component={AuthNavigator} />
+          )}
+        </Stack.Navigator>
+      </NavigationContainer>
+    </ErrorBoundary>
   );
 };
 

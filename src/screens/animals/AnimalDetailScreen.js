@@ -23,6 +23,9 @@ import { useModalContext } from '../../components/modals';
 import { useNavigation } from '@react-navigation/native';
 import { LoadingOverlay } from '../../components/common';
 
+// Set global React for components that might need it
+global.React = React;
+
 const AnimalDetailScreen = ({ route }) => {
   const { animal: initialAnimal } = route.params;
   const [isFavorite, setIsFavorite] = useState(false);

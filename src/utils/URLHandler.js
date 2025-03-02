@@ -9,19 +9,12 @@ import supabase from '../config/supabase';
 export const handleAuthDeepLink = async (url) => {
   if (!url) return false;
   
-  console.log('Processing auth deep link:', url);
-  
   try {
     // If the URL is a Supabase OAuth callback URL
     if (url.includes('auth/callback') || url.includes('reset-password')) {
-      console.log('Processing auth callback URL...');
-      
       // Extract the URL parameters
       const urlParams = new URL(url);
       const params = Object.fromEntries(urlParams.searchParams.entries());
-      
-      // Log the extracted parameters (without sensitive info)
-      console.log('Auth params detected:', Object.keys(params));
       
       // Let Supabase handle the URL
       const { data, error } = await supabase.auth.getSession();
@@ -31,9 +24,8 @@ export const handleAuthDeepLink = async (url) => {
         return false;
       }
       
-      // Log successful authentication
+      // Return true if we have a session
       if (data?.session) {
-        console.log('Successfully authenticated user from deep link');
         return true;
       }
     }
@@ -53,7 +45,6 @@ export const handleAuthDeepLink = async (url) => {
 export const registerURLHandler = (callback) => {
   const subscription = Linking.addEventListener('url', ({ url }) => {
     if (url) {
-      console.log('URL opened:', url);
       callback(url);
     }
   });

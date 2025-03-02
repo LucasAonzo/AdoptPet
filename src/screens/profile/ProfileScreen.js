@@ -19,6 +19,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useUserProfile, useUpdateProfile, useDebugUserData } from '../../hooks/useUserProfile';
 import { useQueryClient } from '@tanstack/react-query';
 import styles from './ProfileScreen.styles';
+import { Image as ExpoImage } from 'expo-image';
 
 const ProfileScreen = ({ navigation }) => {
   const { user: authUser, signOut } = useAuth();
@@ -155,10 +156,9 @@ const ProfileScreen = ({ navigation }) => {
         style={styles.animalCard}
         onPress={() => navigation.navigate('AnimalDetail', { animal })}
       >
-        <Image
+        <ExpoImage
           source={{ uri: animal.image_url }}
           style={styles.animalImage}
-          resizeMode="cover"
         />
         <View style={styles.animalInfo}>
           <Text style={styles.animalName}>{animal.name}</Text>
@@ -195,15 +195,14 @@ const ProfileScreen = ({ navigation }) => {
             onPress={editMode ? pickImage : null}
             disabled={!editMode}
           >
-            <Image
-              source={
-                profileImage
-                  ? { uri: profileImage.uri }
-                  : profile?.avatar_url
-                  ? { uri: profile.avatar_url }
-                  : { uri: defaultAvatarBase64 }
-              }
+            <ExpoImage
+              source={{ 
+                uri: profileImage?.uri || 
+                profile?.avatar_url || 
+                defaultAvatarBase64 
+              }}
               style={styles.profileImage}
+              contentFit="cover"
             />
             {editMode && (
               <View style={styles.editImageOverlay}>
