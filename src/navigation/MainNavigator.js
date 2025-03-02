@@ -12,31 +12,13 @@ const Stack = createStackNavigator();
 
 // Create navigation configuration with optimized settings
 const navigationConfig = {
-  // Transition animation configuration for smoother transitions
+  // Transition animation configuration
   screenOptions: {
-    // Use a custom animation that performs better
-    transitionSpec: {
-      open: {
-        animation: 'timing',
-        config: {
-          duration: 250,
-          useNativeDriver: true,
-        },
-      },
-      close: {
-        animation: 'timing',
-        config: {
-          duration: 200,
-          useNativeDriver: true,
-        },
-      },
-    },
-    // Use a hardware accelerated animation
-    cardStyleInterpolator: ({ current }) => ({
-      cardStyle: {
-        opacity: current.progress,
-      },
-    }),
+    // Enable animations for smooth transitions
+    animationEnabled: true,
+    // Enable gestures for navigation
+    gestureEnabled: true,
+    gestureDirection: 'horizontal',
   },
 };
 
@@ -182,24 +164,11 @@ const MainNavigator = () => {
           screenOptions={{
             headerShown: false,
             cardStyle: { backgroundColor: '#f8f8f8' },
-            // Add transition optimizations
+            // Enable animations for smooth transitions
             animationEnabled: true,
+            gestureEnabled: true,
+            gestureDirection: 'horizontal',
             detachPreviousScreen: !Platform.isPad,
-            // Use hardware acceleration for animations
-            cardStyleInterpolator: ({ current, layouts }) => {
-              return {
-                cardStyle: {
-                  transform: [
-                    {
-                      translateX: current.progress.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [layouts.screen.width, 0],
-                      }),
-                    },
-                  ],
-                },
-              };
-            },
           }}
         >
           {isAuthenticated ? (

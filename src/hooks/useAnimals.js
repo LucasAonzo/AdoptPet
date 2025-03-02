@@ -79,6 +79,8 @@ export const useAnimals = ({ category = 'all', searchText = '' }) => {
     getNextPageParam: (lastPage) => lastPage.nextPage,
     staleTime: 1000 * 60 * 5, // 5 minutes
     retry: 2,
+    keepPreviousData: true, // Keep the previous data when fetching new data
+    cacheTime: 1000 * 60 * 30, // 30 minutes
   });
 };
 

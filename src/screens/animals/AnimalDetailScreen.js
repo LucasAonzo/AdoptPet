@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   SafeAreaView,
   StatusBar,
-  Image,
   Animated,
   Platform
 } from 'react-native';
@@ -21,17 +20,20 @@ import { useUpdateAnimal, useDeleteAnimal, useAdoptAnimal } from '../../hooks/us
 import styles from './AnimalDetailScreen.styles';
 import { useModalContext } from '../../components/modals';
 import { useNavigation } from '@react-navigation/native';
-import { LoadingOverlay } from '../../components/common';
+import { LoadingOverlay, OptimizedImage, SkeletonLoader } from '../../components/common';
+import { useCheckPendingApplication } from '../../hooks/useAdoptionMutations';
 
 // Set global React for components that might need it
 global.React = React;
 
-const AnimalDetailScreen = ({ route }) => {
-  const { animal: initialAnimal } = route.params;
+const AnimalDetailScreen = ({ route, navigation }) => {
+  // Get the animalId from route params
+  const { animalId, animal: initialAnimal } = route.params;
+  const id = animalId || (initialAnimal?.id);
+  
   const [isFavorite, setIsFavorite] = useState(false);
   const scrollY = useRef(new Animated.Value(0)).current;
   const { user } = useAuth();
-  const navigation = useNavigation();
   
   // Use the global modal context
   const { 
@@ -44,9 +46,10 @@ const AnimalDetailScreen = ({ route }) => {
   } = useModalContext();
 
   // Get animal data and mutations
-  const { data: animalData, isLoading: isLoadingAnimal, isError: isLoadError } = useAnimal(initialAnimal.id);
+  const { data: animalData, isLoading: isLoadingAnimal, isError: isLoadError } = useAnimal(id);
   const { mutate: deleteAnimal, isPending: isDeleting } = useDeleteAnimal(navigation);
   const { mutate: adoptAnimal, isPending: isAdopting } = useAdoptAnimal();
+  const { data: applicationStatus } = useCheckPendingApplication(id);
   
   // Use the fetched animal data if available, otherwise use the initial data
   const displayAnimal = animalData || initialAnimal;
@@ -67,43 +70,60 @@ const AnimalDetailScreen = ({ route }) => {
         fontWeight: 'bold',
         fontSize: 18,
       },
+      // Keep gesture enabled but hide the header back button
+      gestureEnabled: true,
+      gestureDirection: 'horizontal',
       headerLeft: () => null,
     });
   }, [navigation]);
 
   // Use state from the fetched data or fall back to initial data
-  const isAdopted = displayAnimal?.is_adopted || initialAnimal.is_adopted;
+  const isAdopted = displayAnimal?.is_adopted;
 
   const handleAdopt = () => {
-    showConfirmationModal(
-      'Mark as Adopted',
-      'Are you sure you want to mark this animal as adopted?',
-      async () => {
-        try {
-          // User confirmed adoption
-          showLoadingModal('Updating adoption status...');
-          
-          // Make sure we have a valid ID
-          const animalId = displayAnimal?.id || initialAnimal.id;
-          if (!animalId) {
-            hideModal(); // Hide loading modal
-            showErrorModal('Error', 'Could not determine animal ID');
-            return;
+    if (!user) {
+      showErrorModal('Authentication Required', 'Please login to adopt this pet');
+      return;
+    }
+    
+    // Check if user already has a pending application
+    if (applicationStatus?.hasApplication) {
+      const application = applicationStatus.applicationDetails;
+      
+      // Show different modals based on application status
+      if (application.status === 'pending') {
+        showInfoModal(
+          'Application Pending',
+          `You already have a pending application for ${displayAnimal.name}. Would you like to view your application?`,
+          () => {
+            navigation.navigate('ApplicationDetails', { applicationId: application.id });
           }
-          
-          // Call the mutation using the async/await pattern for cleaner handling
-          await adoptAnimal(animalId);
-          
-          // On success
-          hideModal(); // Hide loading modal
-          showSuccessModal('Success', 'Animal marked as adopted successfully!');
-        } catch (error) {
-          // On error
-          hideModal(); // Hide loading modal
-          showErrorModal('Error', `Failed to mark as adopted: ${error.message}`);
-        }
+        );
+      } else if (application.status === 'approved') {
+        showSuccessModal(
+          'Application Approved',
+          `Great news! Your application to adopt ${displayAnimal.name} has been approved. Please check your application details.`,
+          () => {
+            navigation.navigate('ApplicationDetails', { applicationId: application.id });
+          }
+        );
+      } else if (application.status === 'rejected') {
+        showErrorModal(
+          'Application Rejected',
+          `We're sorry, but your application for ${displayAnimal.name} was not approved. You can view the details or contact us for more information.`,
+          () => {
+            navigation.navigate('ApplicationDetails', { applicationId: application.id });
+          }
+        );
+      } else {
+        // For cancelled applications, allow reapplying
+        navigation.navigate('AdoptionApplication', { animal: displayAnimal });
       }
-    );
+      return;
+    }
+    
+    // If no application exists, direct to the application form
+    navigation.navigate('AdoptionApplication', { animal: displayAnimal });
   };
 
   const handleContact = () => {
@@ -160,8 +180,7 @@ const AnimalDetailScreen = ({ route }) => {
   if (isLoadingAnimal && !initialAnimal) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#8e74ae" />
-        <Text style={styles.loadingText}>Loading pet details...</Text>
+        <SkeletonLoader variant="detail" />
       </View>
     );
   }
@@ -184,17 +203,20 @@ const AnimalDetailScreen = ({ route }) => {
 
   return (
     <>
-      {(isDeleting || isAdopting) && <LoadingOverlay />}
+      {(isDeleting || isAdopting) && <LoadingOverlay type="paw" text="Processing..." />}
       <View style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor="#8e74ae" />
         
         <View style={styles.mainContent}>
           {/* Pet Image */}
           <View style={styles.petDetailImageContainer}>
-            <Image 
-              source={{ uri: displayAnimal.image_url }} 
+            <OptimizedImage 
+              source={displayAnimal.image_url}
               style={styles.petDetailImage}
-              resizeMode="cover"
+              contentFit="cover"
+              showLoader={true}
+              transitionDuration={500}
+              memoKey={`detail-${displayAnimal.id}`}
             />
             
             {/* Action Buttons */}
@@ -210,13 +232,11 @@ const AnimalDetailScreen = ({ route }) => {
                 style={styles.detailHeaderButton}
                 onPress={toggleFavorite}
               >
-                <Animated.View>
-                  <Ionicons 
-                    name={isFavorite ? "heart" : "heart-outline"} 
-                    size={24} 
-                    color={isFavorite ? '#ff4081' : '#444'} 
-                  />
-                </Animated.View>
+                <Ionicons 
+                  name={isFavorite ? "heart" : "heart-outline"} 
+                  size={24} 
+                  color={isFavorite ? "#e74c3c" : "#444"} 
+                />
               </TouchableOpacity>
             </View>
             
@@ -285,9 +305,10 @@ const AnimalDetailScreen = ({ route }) => {
             {/* Owner Information */}
             <View style={styles.ownerSection}>
               <View style={styles.ownerInfo}>
-                <Image 
-                  source={{ uri: displayAnimal.users?.profile_picture || 'https://randomuser.me/api/portraits/women/32.jpg' }} 
+                <OptimizedImage 
+                  source={displayAnimal.users?.profile_picture || 'https://randomuser.me/api/portraits/women/32.jpg'} 
                   style={styles.ownerImage}
+                  contentFit="cover"
                 />
                 <View style={styles.ownerTextInfo}>
                   <Text style={styles.ownerLabel}>Owner by:</Text>
@@ -367,61 +388,69 @@ const AnimalDetailScreen = ({ route }) => {
             </View>
             
             {/* Adopt/Edit buttons */}
-            <View style={styles.buttonContainer}>
-              {isOwner ? (
-                <>
-                  <TouchableOpacity
-                    style={styles.editButton}
-                    onPress={handleEdit}
-                    disabled={isDeleting || isAdopting}
-                  >
-                    <LinearGradient
-                      colors={['#a58fd8', '#8e74ae']}
-                      style={styles.editButtonGradient}
-                    >
-                      <Text style={styles.editButtonText}>Edit</Text>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                  
-                  <TouchableOpacity
-                    style={styles.deleteButton}
-                    onPress={handleDelete}
-                    disabled={isDeleting || isAdopting}
-                  >
-                    <LinearGradient
-                      colors={['#ff6b6b', '#ee5253']}
-                      style={styles.deleteButtonGradient}
-                    >
-                      <Text style={styles.deleteButtonText}>Delete</Text>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                </>
-              ) : (
+            {isOwner ? (
+              <View style={styles.ownerButtonsContainer}>
                 <TouchableOpacity
-                  style={styles.adoptButton}
-                  onPress={handleAdopt}
-                  disabled={isDeleting || isAdopting || displayAnimal.is_adopted}
+                  style={styles.editButton}
+                  onPress={handleEdit}
+                  disabled={isDeleting || isAdopting}
                 >
                   <LinearGradient
-                    colors={displayAnimal.is_adopted ? ['#aaaaaa', '#888888'] : ['#a58fd8', '#8e74ae']}
-                    style={styles.adoptButtonGradient}
+                    colors={['#a58fd8', '#8e74ae']}
+                    style={styles.editButtonGradient}
                   >
-                    <View style={styles.adoptButtonContent}>
-                      {isDeleting || isAdopting ? (
-                        <ActivityIndicator color="#fff" />
-                      ) : (
-                        <>
-                          <Ionicons name="heart" size={20} color="#fff" />
-                          <Text style={styles.adoptButtonText}>
-                            {displayAnimal.is_adopted ? 'Already Adopted' : 'Adopt Me!'}
-                          </Text>
-                        </>
-                      )}
-                    </View>
+                    <Text style={styles.editButtonText}>Edit</Text>
                   </LinearGradient>
                 </TouchableOpacity>
-              )}
-            </View>
+                
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={handleDelete}
+                  disabled={isDeleting || isAdopting}
+                >
+                  <LinearGradient
+                    colors={['#ff6b6b', '#ee5253']}
+                    style={styles.deleteButtonGradient}
+                  >
+                    <Text style={styles.deleteButtonText}>Delete</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={[
+                  styles.adoptButton,
+                  displayAnimal.is_adopted && styles.adoptButtonDisabled
+                ]}
+                onPress={handleAdopt}
+                disabled={isDeleting || isAdopting || displayAnimal.is_adopted}
+              >
+                <LinearGradient
+                  colors={displayAnimal.is_adopted ? 
+                    ['#aaaaaa', '#888888'] : 
+                    ['#a58fd8', '#8e74ae']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.adoptButtonGradient}
+                >
+                  <View style={styles.adoptButtonContent}>
+                    {isDeleting || isAdopting ? (
+                      <ActivityIndicator color="#fff" size="small" />
+                    ) : (
+                      <>
+                        <Ionicons name="heart" size={20} color="#fff" />
+                        <Text style={styles.adoptButtonText}>
+                          {displayAnimal.is_adopted ? 'Already Adopted' : 
+                          (applicationStatus?.hasApplication && 
+                           applicationStatus.applicationDetails?.status === 'pending') ? 
+                           'Application Pending' : 'Adopt Me!'}
+                        </Text>
+                      </>
+                    )}
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+            )}
           </Animated.ScrollView>
         </View>
       </View>

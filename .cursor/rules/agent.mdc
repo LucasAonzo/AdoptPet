@@ -1,0 +1,16 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: Rules for the agent to follow
+globs: 
+alwaysApply: true
+---
+# Agent Instructions
+
+If you create a new file(s), please run the following command afterwards to update the project documentation.
+
+```powershell
+& "C:\Users\lucas\.cursor-tutor-3\AdoptMe\.scripts\update_structure.ps1"

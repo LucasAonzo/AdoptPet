@@ -9,6 +9,10 @@ import ProfileScreen from '../screens/profile/ProfileScreen';
 import AddAnimalScreen from '../screens/animals/AddAnimalScreen';
 import AnimalDetailScreen from '../screens/animals/AnimalDetailScreen';
 import PublicationSuccessScreen from '../screens/animals/PublicationSuccessScreen';
+import AdoptionApplicationScreen from '../screens/animals/AdoptionApplicationScreen';
+import AdoptionSuccessScreen from '../screens/animals/AdoptionSuccessScreen';
+import ApplicationsScreen from '../screens/profile/ApplicationsScreen';
+import ApplicationDetailsScreen from '../screens/profile/ApplicationDetailsScreen';
 
 const Tab = createBottomTabNavigator();
 const HomeStack = createStackNavigator();
@@ -27,6 +31,13 @@ const HomeStackScreen = () => {
         headerTitleStyle: {
           fontWeight: 'bold',
         },
+        animationEnabled: true, // Enable animations for smoother transitions
+        detachPreviousScreen: false, // Preserve previous screen in memory
+        freezeOnBlur: true, // Preserve component state when screen is blurred
+        gestureEnabled: true, // Enable swipe gestures for navigation
+        gestureDirection: 'horizontal', // Set the direction for the gesture
+        // Make gesture work independently of back button
+        gestureResponseDistance: { horizontal: 50 },
       }}
     >
       <HomeStack.Screen 
@@ -46,6 +57,8 @@ const HomeStackScreen = () => {
         component={AnimalDetailScreen}
         options={{
           title: 'Animal Details',
+          gestureEnabled: true,
+          gestureResponseDistance: 50,
         }}
       />
       <HomeStack.Screen 
@@ -62,6 +75,38 @@ const HomeStackScreen = () => {
           title: 'Publication Success',
           headerShown: false,
           gestureEnabled: false
+        }}
+      />
+      <HomeStack.Screen
+        name="AdoptionApplication"
+        component={AdoptionApplicationScreen}
+        options={{
+          title: 'Adoption Application',
+          gestureEnabled: true,
+          gestureResponseDistance: 50,
+        }}
+      />
+      <HomeStack.Screen
+        name="AdoptionSuccess"
+        component={AdoptionSuccessScreen}
+        options={{
+          title: 'Application Submitted',
+          headerShown: false,
+          gestureEnabled: false
+        }}
+      />
+      <HomeStack.Screen
+        name="Applications"
+        component={ApplicationsScreen}
+        options={{
+          title: 'My Applications',
+        }}
+      />
+      <HomeStack.Screen
+        name="ApplicationDetails"
+        component={ApplicationDetailsScreen}
+        options={{
+          title: 'Application Details',
         }}
       />
     </HomeStack.Navigator>
@@ -98,6 +143,7 @@ const AddStackScreen = ({ navigation }) => {
         headerTitleStyle: {
           fontWeight: 'bold',
         },
+        animationEnabled: false, // Disable animations between screens
         // Disable gesture navigation to prevent default back behavior
         gestureEnabled: false,
       }}
@@ -162,27 +208,43 @@ const ProfileStackScreen = ({ navigation }) => {
         headerTitleStyle: {
           fontWeight: 'bold',
         },
-        // Disable gesture navigation to prevent default back behavior
-        gestureEnabled: false,
+        animationEnabled: true,
+        gestureEnabled: true,
+        gestureDirection: 'horizontal',
       }}
     >
-      <ProfileStack.Screen 
-        name="ProfileMain" 
-        component={ProfileScreen} 
+      <ProfileStack.Screen
+        name="ProfileMain"
+        component={ProfileScreen}
         options={{
-          title: 'My Profile',
-          // Add custom back button that goes to Home
-          headerLeft: () => (
-            <Ionicons 
-              name="arrow-back" 
-              size={24} 
-              color="#fff" 
-              style={{ marginLeft: 15 }}
-              onPress={() => navigation.navigate('Home')}
-            />
-          )
+          title: 'Profile',
+          headerShown: false,
         }}
       />
+      
+      <ProfileStack.Screen
+        name="Applications"
+        component={ApplicationsScreen}
+        options={{
+          title: 'My Applications',
+          headerTitleStyle: {
+            color: '#ffffff',
+            fontSize: 18,
+            fontWeight: '600',
+          },
+        }}
+      />
+      
+      <ProfileStack.Screen
+        name="ApplicationDetails"
+        component={ApplicationDetailsScreen}
+        options={{
+          title: 'Application Details',
+          headerShown: false,
+        }}
+      />
+      
+      {/* ... other profile routes ... */}
     </ProfileStack.Navigator>
   );
 };

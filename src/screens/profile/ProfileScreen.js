@@ -3,11 +3,11 @@ import {
   View,
   Text,
   TouchableOpacity,
-  Image,
   ScrollView,
   Alert,
   ActivityIndicator,
   TextInput,
+  SafeAreaView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,6 +20,7 @@ import { useUserProfile, useUpdateProfile, useDebugUserData } from '../../hooks/
 import { useQueryClient } from '@tanstack/react-query';
 import styles from './ProfileScreen.styles';
 import { Image as ExpoImage } from 'expo-image';
+import { SkeletonLoader } from '../../components/common';
 
 const ProfileScreen = ({ navigation }) => {
   const { user: authUser, signOut } = useAuth();
@@ -62,7 +63,6 @@ const ProfileScreen = ({ navigation }) => {
   // Update form data when profile changes
   useFocusEffect(
     React.useCallback(() => {
-      
       refetch();
       
       if (profile) {
@@ -170,11 +170,354 @@ const ProfileScreen = ({ navigation }) => {
     );
   };
 
+  // Render profile header with avatar and edit button
+  const renderProfileHeader = () => (
+    <View style={styles.profileHeader}>
+      <View style={styles.profileImageContainer}>
+        {isUpdating ? (
+          <ActivityIndicator size="large" color="#8a65c9" />
+        ) : (
+          <ExpoImage
+            source={{ 
+              uri: profileImage?.uri || 
+                  profile?.avatar_url || 
+                  `data:image/png;base64,${defaultAvatarBase64}` 
+            }}
+            style={styles.profileImage}
+            contentFit="cover"
+            transition={300}
+          />
+        )}
+        
+        {editMode && (
+          <TouchableOpacity 
+            style={styles.editImageOverlay}
+            onPress={pickImage}
+          >
+            <Ionicons name="camera" size={24} color="#fff" />
+          </TouchableOpacity>
+        )}
+      </View>
+      
+      <View style={styles.profileInfo}>
+        <Text style={styles.userName}>{profile?.name || 'User'}</Text>
+        <Text style={styles.userEmail}>{authUser?.email || ''}</Text>
+        
+        <View style={styles.statsContainer}>
+          <View style={styles.stat}>
+            <Text style={styles.statNumber}>{myAnimals.length}</Text>
+            <Text style={styles.statLabel}>Listed</Text>
+          </View>
+          
+          <View style={styles.statDivider} />
+          
+          <View style={styles.stat}>
+            <Text style={styles.statNumber}>{adoptedAnimals.length}</Text>
+            <Text style={styles.statLabel}>Adopted</Text>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+
+  // Render profile info when not in edit mode
+  const renderProfileInfo = () => (
+    <View style={styles.detailsCard}>
+      <Text style={styles.sectionTitle}>Personal Information</Text>
+      
+      <View style={styles.detailsContainer}>
+        <View style={styles.detailRow}>
+          <View style={styles.detailIconLabelContainer}>
+            <Ionicons name="person-outline" size={20} color="#8e74ae" />
+            <Text style={styles.detailLabel}>Name</Text>
+          </View>
+          <Text style={styles.detailValue}>{profile?.name || 'Not set'}</Text>
+        </View>
+        
+        <View style={styles.detailRow}>
+          <View style={styles.detailIconLabelContainer}>
+            <Ionicons name="call-outline" size={20} color="#8e74ae" />
+            <Text style={styles.detailLabel}>Phone</Text>
+          </View>
+          <Text style={styles.detailValue}>{profile?.phone || 'Not set'}</Text>
+        </View>
+        
+        <View style={styles.detailRow}>
+          <View style={styles.detailIconLabelContainer}>
+            <Ionicons name="location-outline" size={20} color="#8e74ae" />
+            <Text style={styles.detailLabel}>Address</Text>
+          </View>
+          <Text style={styles.detailValue}>{profile?.address || 'Not set'}</Text>
+        </View>
+        
+        <View style={styles.detailRow}>
+          <View style={styles.detailIconLabelContainer}>
+            <Ionicons name="information-circle-outline" size={20} color="#8e74ae" />
+            <Text style={styles.detailLabel}>Bio</Text>
+          </View>
+          <Text style={styles.detailValue}>{profile?.bio || 'No bio provided'}</Text>
+        </View>
+      </View>
+      
+      <TouchableOpacity
+        style={styles.editButton}
+        onPress={() => setEditMode(true)}
+      >
+        <LinearGradient
+          colors={['#a58fd8', '#8e74ae']}
+          style={styles.editButtonGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+        >
+          <Ionicons name="create-outline" size={20} color="#fff" />
+          <Text style={styles.editButtonText}>Edit Profile</Text>
+        </LinearGradient>
+      </TouchableOpacity>
+    </View>
+  );
+
+  // Render edit form when in edit mode
+  const renderEditForm = () => (
+    <View style={styles.detailsCard}>
+      <Text style={styles.sectionTitle}>Edit Profile</Text>
+      
+      <View style={styles.editDetailsContainer}>
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Name</Text>
+          <View style={styles.inputWrapper}>
+            <Ionicons name="person-outline" size={20} color="#8e74ae" style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              value={formData.name}
+              onChangeText={(value) => handleInputChange('name', value)}
+              placeholder="Enter your name"
+            />
+          </View>
+        </View>
+        
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Phone</Text>
+          <View style={styles.inputWrapper}>
+            <Ionicons name="call-outline" size={20} color="#8e74ae" style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              value={formData.phone}
+              onChangeText={(value) => handleInputChange('phone', value)}
+              placeholder="Enter your phone number"
+              keyboardType="phone-pad"
+            />
+          </View>
+        </View>
+        
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Address</Text>
+          <View style={styles.inputWrapper}>
+            <Ionicons name="location-outline" size={20} color="#8e74ae" style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              value={formData.address}
+              onChangeText={(value) => handleInputChange('address', value)}
+              placeholder="Enter your address"
+            />
+          </View>
+        </View>
+        
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Bio</Text>
+          <View style={[styles.inputWrapper, styles.textAreaWrapper]}>
+            <Ionicons name="information-circle-outline" size={20} color="#8e74ae" style={styles.inputIcon} />
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              value={formData.bio}
+              onChangeText={(value) => handleInputChange('bio', value)}
+              placeholder="Tell us about yourself"
+              multiline
+              numberOfLines={4}
+            />
+          </View>
+        </View>
+      </View>
+      
+      <View style={styles.editActionButtons}>
+        <TouchableOpacity
+          style={styles.cancelButton}
+          onPress={() => setEditMode(false)}
+          disabled={isUpdating}
+        >
+          <Text style={styles.cancelButtonText}>Cancel</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={styles.saveButton}
+          onPress={handleSaveProfile}
+          disabled={isUpdating}
+        >
+          <LinearGradient
+            colors={['#a58fd8', '#8e74ae']}
+            style={styles.saveButtonGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+          >
+            <Ionicons name="checkmark" size={20} color="#fff" />
+            <Text style={styles.saveButtonText}>Save</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  // Render animal sections (my animals, adopted animals)
+  const renderAnimalSections = () => (
+    <>
+      {myAnimals.length > 0 && (
+        <View style={styles.animalsSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>My Listed Animals</Text>
+            <TouchableOpacity 
+              style={styles.refreshButton}
+              onPress={refetch}
+            >
+              <Ionicons name="refresh" size={20} color="#8e74ae" />
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.animalsContainer}>
+            {myAnimals.map(animal => renderAnimalItem(animal))}
+          </View>
+          
+          <TouchableOpacity
+            style={styles.addAnimalButton}
+            onPress={() => navigation.navigate('AddAnimal')}
+          >
+            <LinearGradient
+              colors={['#a58fd8', '#8e74ae']}
+              style={styles.addAnimalButtonGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            >
+              <Ionicons name="add" size={20} color="#fff" />
+              <Text style={styles.addAnimalButtonText}>Add New Animal</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+      )}
+      
+      {myAnimals.length === 0 && (
+        <View style={styles.animalsSection}>
+          <Text style={styles.sectionTitle}>My Listed Animals</Text>
+          
+          <View style={styles.emptyStateContainer}>
+            <Ionicons name="paw" size={50} color="#E8E0FF" />
+            <Text style={styles.emptyStateText}>
+              You don't have any listed animals yet. 
+              Add a new animal for adoption!
+            </Text>
+            
+            <TouchableOpacity
+              style={styles.addAnimalButton}
+              onPress={() => navigation.navigate('AddAnimal')}
+            >
+              <LinearGradient
+                colors={['#a58fd8', '#8e74ae']}
+                style={styles.addAnimalButtonGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+              >
+                <Ionicons name="add" size={20} color="#fff" />
+                <Text style={styles.addAnimalButtonText}>Add New Animal</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+      
+      {adoptedAnimals.length > 0 && (
+        <View style={styles.animalsSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Adopted Animals</Text>
+            <TouchableOpacity 
+              style={styles.refreshButton}
+              onPress={refetch}
+            >
+              <Ionicons name="refresh" size={20} color="#8e74ae" />
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.animalsContainer}>
+            {adoptedAnimals.map(animal => renderAnimalItem(animal))}
+          </View>
+        </View>
+      )}
+    </>
+  );
+  
+  // Render profile actions
+  const renderProfileActions = () => (
+    <View style={styles.detailsCard}>
+      <Text style={styles.sectionTitle}>My Account</Text>
+      
+      <TouchableOpacity
+        style={styles.applicationButton}
+        onPress={() => navigation.navigate('Applications')}
+      >
+        <LinearGradient
+          colors={['#a58fd8', '#8e74ae']}
+          style={styles.applicationButtonGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+        >
+          <Ionicons name="document-text-outline" size={22} color="#fff" />
+          <Text style={styles.applicationButtonText}>View My Adoption Applications</Text>
+        </LinearGradient>
+      </TouchableOpacity>
+      
+      <TouchableOpacity
+        style={styles.logoutButton}
+        onPress={() => {
+          Alert.alert(
+            'Sign Out',
+            'Are you sure you want to sign out?',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Sign Out', style: 'destructive', onPress: handleLogout },
+            ]
+          );
+        }}
+      >
+        <Ionicons name="log-out-outline" size={22} color="#8e74ae" />
+        <Text style={styles.logoutButtonText}>Sign Out</Text>
+      </TouchableOpacity>
+      
+      {__DEV__ && (
+        <TouchableOpacity
+          style={styles.debugButton}
+          onPress={debugUserData}
+        >
+          <Ionicons name="bug-outline" size={22} color="#8e74ae" />
+          <Text style={styles.debugButtonText}>Debug Data</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+
+  // Create a section for the main content rendering
+  const renderMainContent = () => (
+    <ScrollView
+      style={styles.scrollView}
+      contentContainerStyle={styles.scrollContainer}
+      showsVerticalScrollIndicator={false}
+    >
+      {renderProfileHeader()}
+      {editMode ? renderEditForm() : renderProfileInfo()}
+      {!editMode && renderProfileActions()}
+      {!editMode && renderAnimalSections()}
+    </ScrollView>
+  );
+
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#8e74ae" />
-        <Text style={styles.loadingText}>Loading profile...</Text>
+        <SkeletonLoader variant="profile" />
       </View>
     );
   }
@@ -184,316 +527,7 @@ const ProfileScreen = ({ navigation }) => {
       colors={['#ffffff', '#f8f4ff']}
       style={styles.gradientContainer}
     >
-      <ScrollView 
-        contentContainerStyle={styles.scrollContainer}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Profile Header */}
-        <View style={styles.profileHeader}>
-          <TouchableOpacity
-            style={styles.profileImageContainer}
-            onPress={editMode ? pickImage : null}
-            disabled={!editMode}
-          >
-            <ExpoImage
-              source={{ 
-                uri: profileImage?.uri || 
-                profile?.avatar_url || 
-                defaultAvatarBase64 
-              }}
-              style={styles.profileImage}
-              contentFit="cover"
-            />
-            {editMode && (
-              <View style={styles.editImageOverlay}>
-                <Ionicons name="camera" size={24} color="white" />
-              </View>
-            )}
-          </TouchableOpacity>
-          
-          <View style={styles.profileInfo}>
-            {!editMode ? (
-              <>
-                <Text style={styles.userName}>{profile?.name || 'User'}</Text>
-                <Text style={styles.userEmail}>{authUser?.email}</Text>
-                
-                <View style={styles.statsContainer}>
-                  <View style={styles.stat}>
-                    <Text style={styles.statNumber}>{myAnimals.length}</Text>
-                    <Text style={styles.statLabel}>Posted</Text>
-                  </View>
-                  <View style={styles.statDivider} />
-                  <View style={styles.stat}>
-                    <Text style={styles.statNumber}>{adoptedAnimals.length}</Text>
-                    <Text style={styles.statLabel}>Adopted</Text>
-                  </View>
-                </View>
-              </>
-            ) : (
-              <View style={styles.editNameContainer}>
-                <Text style={styles.editLabel}>Name</Text>
-                <TextInput
-                  style={styles.editNameInput}
-                  value={formData.name}
-                  onChangeText={(text) => handleInputChange('name', text)}
-                  placeholder="Your name"
-                  placeholderTextColor="#aaa"
-                />
-              </View>
-            )}
-          </View>
-        </View>
-        
-        {/* Edit Button or Save/Cancel Buttons */}
-        <View style={styles.actionButtonsContainer}>
-          {!editMode ? (
-            <TouchableOpacity
-              style={styles.editButton}
-              onPress={() => setEditMode(true)}
-            >
-              <LinearGradient
-                colors={['#a58fd8', '#8e74ae', '#7d5da7']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.editButtonGradient}
-              >
-                <Ionicons name="create-outline" size={20} color="white" />
-                <Text style={styles.editButtonText}>Edit Profile</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.editActionButtons}>
-              <TouchableOpacity
-                style={styles.cancelButton}
-                onPress={() => {
-                  setEditMode(false);
-                  setProfileImage(null);
-                  // Reset form data to current profile
-                  if (profile) {
-                    setFormData({
-                      name: profile.name || '',
-                      phone: profile.phone || '',
-                      address: profile.address || '',
-                      bio: profile.bio || '',
-                    });
-                  }
-                }}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={styles.saveButton}
-                onPress={handleSaveProfile}
-                disabled={isUpdating}
-              >
-                <LinearGradient
-                  colors={['#a58fd8', '#8e74ae', '#7d5da7']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.saveButtonGradient}
-                >
-                  {isUpdating ? (
-                    <ActivityIndicator size="small" color="white" />
-                  ) : (
-                    <>
-                      <Ionicons name="checkmark-outline" size={20} color="white" />
-                      <Text style={styles.saveButtonText}>Save</Text>
-                    </>
-                  )}
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-        
-        {/* User Details Section */}
-        <View style={styles.detailsCard}>
-          <Text style={styles.sectionTitle}>
-            {editMode ? 'Edit Your Details' : 'Your Details'}
-          </Text>
-          
-          {!editMode ? (
-            // Display Mode
-            <View style={styles.detailsContainer}>
-              <View style={styles.detailRow}>
-                <View style={styles.detailIconLabelContainer}>
-                  <Ionicons name="mail-outline" size={20} color="#8e74ae" />
-                  <Text style={styles.detailLabel}>Email:</Text>
-                </View>
-                <Text style={styles.detailValue}>{authUser?.email}</Text>
-              </View>
-              
-              <View style={styles.detailRow}>
-                <View style={styles.detailIconLabelContainer}>
-                  <Ionicons name="call-outline" size={20} color="#8e74ae" />
-                  <Text style={styles.detailLabel}>Phone:</Text>
-                </View>
-                <Text style={styles.detailValue}>{profile?.phone || 'Not provided'}</Text>
-              </View>
-              
-              <View style={styles.detailRow}>
-                <View style={styles.detailIconLabelContainer}>
-                  <Ionicons name="location-outline" size={20} color="#8e74ae" />
-                  <Text style={styles.detailLabel}>Address:</Text>
-                </View>
-                <Text style={styles.detailValue}>{profile?.address || 'Not provided'}</Text>
-              </View>
-              
-              <View style={styles.detailRow}>
-                <View style={styles.detailIconLabelContainer}>
-                  <Ionicons name="information-circle-outline" size={20} color="#8e74ae" />
-                  <Text style={styles.detailLabel}>Bio:</Text>
-                </View>
-                <Text style={styles.detailValue}>{profile?.bio || 'No bio provided'}</Text>
-              </View>
-            </View>
-          ) : (
-            // Edit Mode
-            <View style={styles.editDetailsContainer}>
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Phone</Text>
-                <View style={styles.inputWrapper}>
-                  <Ionicons name="call-outline" size={20} color="#8e74ae" style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.input}
-                    value={formData.phone}
-                    onChangeText={(text) => handleInputChange('phone', text)}
-                    placeholder="Your phone number"
-                    placeholderTextColor="#aaa"
-                    keyboardType="phone-pad"
-                  />
-                </View>
-              </View>
-              
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Address</Text>
-                <View style={styles.inputWrapper}>
-                  <Ionicons name="location-outline" size={20} color="#8e74ae" style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.input}
-                    value={formData.address}
-                    onChangeText={(text) => handleInputChange('address', text)}
-                    placeholder="Your address"
-                    placeholderTextColor="#aaa"
-                  />
-                </View>
-              </View>
-              
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Bio</Text>
-                <View style={[styles.inputWrapper, styles.textAreaWrapper]}>
-                  <Ionicons name="information-circle-outline" size={20} color="#8e74ae" style={[styles.inputIcon, {alignSelf: 'flex-start', marginTop: 12}]} />
-                  <TextInput
-                    style={[styles.input, styles.textArea]}
-                    value={formData.bio}
-                    onChangeText={(text) => handleInputChange('bio', text)}
-                    placeholder="Tell us about yourself"
-                    placeholderTextColor="#aaa"
-                    multiline
-                    numberOfLines={4}
-                    textAlignVertical="top"
-                  />
-                </View>
-              </View>
-            </View>
-          )}
-        </View>
-        
-        {/* My Animals Section */}
-        <View style={styles.animalsSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>My Animals</Text>
-            <TouchableOpacity 
-              style={styles.refreshButton}
-              onPress={() => refetch()}
-              disabled={isRefetching}
-            >
-              {isRefetching ? (
-                <ActivityIndicator size="small" color="#8e74ae" />
-              ) : (
-                <Ionicons name="refresh-outline" size={20} color="#8e74ae" />
-              )}
-            </TouchableOpacity>
-          </View>
-          
-          {myAnimals.length === 0 ? (
-            <View style={styles.emptyStateContainer}>
-              <Ionicons name="paw-outline" size={40} color="#8e74ae" />
-              <Text style={styles.emptyStateText}>
-                You haven't posted any animals yet
-              </Text>
-              <TouchableOpacity
-                style={styles.addAnimalButton}
-                onPress={() => navigation.navigate('Add')}
-              >
-                <LinearGradient
-                  colors={['#a58fd8', '#8e74ae', '#7d5da7']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.addAnimalButtonGradient}
-                >
-                  <Ionicons name="add-outline" size={20} color="white" />
-                  <Text style={styles.addAnimalButtonText}>Add Animal</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View style={styles.animalsContainer}>
-              {myAnimals.map(animal => renderAnimalItem(animal))}
-            </View>
-          )}
-        </View>
-        
-        {/* Adopted Animals Section */}
-        <View style={styles.animalsSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Adopted Animals</Text>
-            <TouchableOpacity 
-              style={styles.refreshButton}
-              onPress={() => refetch()}
-              disabled={isRefetching}
-            >
-              {isRefetching ? (
-                <ActivityIndicator size="small" color="#8e74ae" />
-              ) : (
-                <Ionicons name="refresh-outline" size={20} color="#8e74ae" />
-              )}
-            </TouchableOpacity>
-          </View>
-          
-          {adoptedAnimals.length === 0 ? (
-            <View style={styles.emptyStateContainer}>
-              <Ionicons name="heart-outline" size={40} color="#8e74ae" />
-              <Text style={styles.emptyStateText}>
-                You haven't adopted any animals yet
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.animalsContainer}>
-              {adoptedAnimals.map(animal => renderAnimalItem(animal))}
-            </View>
-          )}
-        </View>
-        
-        {/* Logout Button */}
-        <TouchableOpacity
-          style={styles.logoutButton}
-          onPress={handleLogout}
-        >
-          <Ionicons name="log-out-outline" size={20} color="#8e74ae" />
-          <Text style={styles.logoutButtonText}>Log Out</Text>
-        </TouchableOpacity>
-        
-        {/* Debug Button - only visible in development */}
-        <TouchableOpacity
-          style={styles.debugButton}
-          onPress={debugUserData}
-        >
-          <Ionicons name="bug-outline" size={20} color="#8e74ae" />
-          <Text style={styles.debugButtonText}>Debug Data</Text>
-        </TouchableOpacity>
-      </ScrollView>
+      {renderMainContent()}
     </LinearGradient>
   );
 };

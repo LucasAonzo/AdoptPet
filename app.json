@@ -12,7 +12,9 @@
       "backgroundColor": "#ffffff"
     },
     "assetBundlePatterns": [
-      "**/*"
+      "**/*",
+      "assets/**/*",
+      "src/assets/**/*"
     ],
     "ios": {
       "supportsTablet": true
@@ -31,6 +33,9 @@
     "extra": {
       "supabaseUrl": "",
       "supabaseAnonKey": ""
+    },
+    "packagerOpts": {
+      "config": "metro.config.js"
     }
   }
 } 

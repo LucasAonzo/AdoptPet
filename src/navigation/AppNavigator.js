@@ -142,7 +142,8 @@ const AppNavigator = () => {
           headerTitleStyle: {
             fontWeight: 'bold',
             fontSize: 18
-          }
+          },
+          animationEnabled: false,
         }}
       >
         <Stack.Screen 

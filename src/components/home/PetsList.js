@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet, ScrollView } from 'react-native';
 import AnimalCard from '../animals/AnimalCard';
 import commonStyles from '../../styles/commonStyles';
 
@@ -11,7 +11,7 @@ const PetsList = ({
   onLoadMore 
 }) => {
   return (
-    <>
+    <View style={styles.container}>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Adopt pet</Text>
         <TouchableOpacity>
@@ -19,49 +19,47 @@ const PetsList = ({
         </TouchableOpacity>
       </View>
       
-      {animals.length === 0 ? (
-        <View style={commonStyles.emptyContainer}>
-          <Text style={commonStyles.emptyText}>No animals available for adoption</Text>
-        </View>
-      ) : (
-        <View style={styles.petsContainer}>
-          {animals.map((animal) => (
-            <AnimalCard 
-              key={animal.id} 
-              animal={animal} 
-              onPress={() => navigation.navigate('AnimalDetail', { animal })} 
-            />
-          ))}
-          
-          {/* Loading indicator for pagination */}
-          {isFetchingNextPage && (
-            <View style={styles.loadMoreContainer}>
-              <ActivityIndicator size="small" color="#8e74ae" />
-              <Text style={styles.loadMoreText}>Loading more...</Text>
-            </View>
-          )}
-          
-          {/* Load more button if more data is available */}
-          {hasNextPage && !isFetchingNextPage && (
-            <TouchableOpacity 
-              style={styles.loadMoreButton}
-              onPress={onLoadMore}
-            >
-              <Text style={styles.loadMoreButtonText}>Load more animals</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
-    </>
+      <View style={styles.petsContainer}>
+        {animals.map((animal) => (
+          <AnimalCard 
+            key={animal.id} 
+            animal={animal} 
+            onPress={() => navigation.navigate('AnimalDetail', { animalId: animal.id })} 
+          />
+        ))}
+      </View>
+      
+      {/* Footer */}
+      <View style={styles.footer}>
+        {isFetchingNextPage && (
+          <View style={styles.loadMoreContainer}>
+            <ActivityIndicator size="small" color="#8e74ae" />
+            <Text style={styles.loadMoreText}>Loading more...</Text>
+          </View>
+        )}
+        
+        {hasNextPage && !isFetchingNextPage && (
+          <TouchableOpacity 
+            style={styles.loadMoreButton}
+            onPress={onLoadMore}
+          >
+            <Text style={styles.loadMoreButtonText}>Load more animals</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
     marginBottom: 15,
   },
   sectionTitle: {
@@ -76,8 +74,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+  },
+  footer: {
+    paddingVertical: 10,
+    width: '100%',
   },
   loadMoreContainer: {
     width: '100%',

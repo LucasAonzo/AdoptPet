@@ -414,6 +414,32 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#8e74ae',
   },
+  
+  // Application Button Styles
+  applicationButton: {
+    alignSelf: 'center',
+    marginVertical: 20,
+    borderRadius: 25,
+    overflow: 'hidden',
+    elevation: 3,
+    shadowColor: '#8e74ae',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+  },
+  applicationButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+  },
+  applicationButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
+    marginLeft: 8,
+  },
 });
 
 export default styles; 
