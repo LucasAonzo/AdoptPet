@@ -1,11 +1,17 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { logErrorToFile, flushMemoryLogs, addBreadcrumb } from '../../utils/debugUtils';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { 
+      hasError: false, 
+      error: null,
+      errorInfo: null,
+      showDetails: false
+    };
   }
 
   static getDerivedStateFromError(error) {
@@ -14,12 +20,43 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    // You can log the error to an error reporting service
-    console.log('Error caught by ErrorBoundary:', error, errorInfo);
+    this.setState({ errorInfo });
+    
+    // Add a breadcrumb for the error
+    addBreadcrumb('Error caught by boundary', {
+      type: 'error',
+      message: error.message || 'Unknown error',
+      source: 'ErrorBoundary',
+    });
+    
+    // Log detailed error information
+    console.error('Error caught by ErrorBoundary:', error);
+    
+    try {
+      // Log to file system for later debugging
+      logErrorToFile({
+        message: error.message || 'Unknown error',
+        name: error.name,
+        stack: error.stack,
+        componentStack: errorInfo?.componentStack,
+        timestamp: new Date().toISOString(),
+        source: 'ErrorBoundary'
+      });
+      
+      // Make sure logs are persisted
+      flushMemoryLogs();
+    } catch (loggingError) {
+      console.error('Failed to log error details:', loggingError);
+    }
   }
 
   resetError = () => {
-    this.setState({ hasError: false, error: null });
+    addBreadcrumb('User reset error in ErrorBoundary');
+    this.setState({ hasError: false, error: null, errorInfo: null });
+  }
+  
+  toggleDetails = () => {
+    this.setState(prevState => ({ showDetails: !prevState.showDetails }));
   }
 
   render() {
@@ -31,6 +68,27 @@ class ErrorBoundary extends React.Component {
           <Text style={styles.message}>
             {this.state.error?.message || 'An unexpected error occurred'}
           </Text>
+          
+          <TouchableOpacity 
+            style={styles.detailsToggle} 
+            onPress={this.toggleDetails}
+          >
+            <Text style={styles.detailsToggleText}>
+              {this.state.showDetails ? 'Hide Details' : 'Show Details'}
+            </Text>
+          </TouchableOpacity>
+          
+          {this.state.showDetails && (
+            <ScrollView style={styles.errorDetails}>
+              <Text style={styles.errorText}>
+                {this.state.error?.toString()}
+              </Text>
+              <Text style={styles.stackText}>
+                {this.state.errorInfo?.componentStack}
+              </Text>
+            </ScrollView>
+          )}
+          
           {this.props.fallback || (
             <TouchableOpacity
               style={styles.button}
@@ -64,9 +122,34 @@ const styles = StyleSheet.create({
   message: {
     fontSize: 16,
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: 16,
     color: '#666',
     lineHeight: 22,
+  },
+  detailsToggle: {
+    marginBottom: 16,
+  },
+  detailsToggleText: {
+    color: '#8e74ae',
+    textDecorationLine: 'underline',
+  },
+  errorDetails: {
+    maxHeight: 200,
+    width: '100%',
+    padding: 10,
+    backgroundColor: '#f8f8f8',
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#e74c3c',
+    marginBottom: 10,
+  },
+  stackText: {
+    fontSize: 12,
+    color: '#777',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
   button: {
     backgroundColor: '#8e74ae',

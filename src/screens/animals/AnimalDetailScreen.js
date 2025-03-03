@@ -21,7 +21,6 @@ import styles from './AnimalDetailScreen.styles';
 import { useModalContext } from '../../components/modals';
 import { useNavigation } from '@react-navigation/native';
 import { LoadingOverlay, OptimizedImage, SkeletonLoader } from '../../components/common';
-import { useCheckPendingApplication } from '../../hooks/useAdoptionMutations';
 
 // Set global React for components that might need it
 global.React = React;
@@ -32,6 +31,8 @@ const AnimalDetailScreen = ({ route, navigation }) => {
   const id = animalId || (initialAnimal?.id);
   
   const [isFavorite, setIsFavorite] = useState(false);
+  const [hasApplied, setHasApplied] = useState(false);
+  const [checkingApplication, setCheckingApplication] = useState(true);
   const scrollY = useRef(new Animated.Value(0)).current;
   const { user } = useAuth();
   
@@ -49,13 +50,53 @@ const AnimalDetailScreen = ({ route, navigation }) => {
   const { data: animalData, isLoading: isLoadingAnimal, isError: isLoadError } = useAnimal(id);
   const { mutate: deleteAnimal, isPending: isDeleting } = useDeleteAnimal(navigation);
   const { mutate: adoptAnimal, isPending: isAdopting } = useAdoptAnimal();
-  const { data: applicationStatus } = useCheckPendingApplication(id);
   
   // Use the fetched animal data if available, otherwise use the initial data
   const displayAnimal = animalData || initialAnimal;
   
   // Is the current user the owner of this animal?
   const isOwner = user?.id && displayAnimal?.user_id === user.id;
+
+  // Check if the user has already applied for this animal
+  useEffect(() => {
+    const checkApplication = async () => {
+      if (!user || !displayAnimal?.id) {
+        setCheckingApplication(false);
+        return;
+      }
+      
+      try {
+        const { data, error } = await supabase
+          .from('adoption_applications')
+          .select('id, status')
+          .eq('user_id', user.id)
+          .eq('animal_id', displayAnimal.id)
+          .maybeSingle();
+        
+        if (error) {
+          console.error('Error checking application status:', error);
+        } else {
+          setHasApplied(!!data); // Set to true if data exists
+        }
+      } catch (err) {
+        console.error('Exception checking application:', err);
+      } finally {
+        setCheckingApplication(false);
+      }
+    };
+    
+    checkApplication();
+  }, [user, displayAnimal, route.params?.refreshTimestamp]);
+
+  // Force immediate update if coming from application submission
+  useEffect(() => {
+    if (route.params?.applicationSubmitted) {
+      setHasApplied(true);
+      
+      // Reset the flag to prevent unnecessary updates
+      navigation.setParams({ applicationSubmitted: undefined, refreshTimestamp: undefined });
+    }
+  }, [route.params?.applicationSubmitted, navigation]);
 
   // Set screen options on component mount
   useEffect(() => {
@@ -82,48 +123,22 @@ const AnimalDetailScreen = ({ route, navigation }) => {
 
   const handleAdopt = () => {
     if (!user) {
-      showErrorModal('Authentication Required', 'Please login to adopt this pet');
+      showErrorModal('Authentication Required', 'Please login to continue');
       return;
     }
     
-    // Check if user already has a pending application
-    if (applicationStatus?.hasApplication) {
-      const application = applicationStatus.applicationDetails;
-      
-      // Show different modals based on application status
-      if (application.status === 'pending') {
-        showInfoModal(
-          'Application Pending',
-          `You already have a pending application for ${displayAnimal.name}. Would you like to view your application?`,
-          () => {
-            navigation.navigate('ApplicationDetails', { applicationId: application.id });
-          }
-        );
-      } else if (application.status === 'approved') {
-        showSuccessModal(
-          'Application Approved',
-          `Great news! Your application to adopt ${displayAnimal.name} has been approved. Please check your application details.`,
-          () => {
-            navigation.navigate('ApplicationDetails', { applicationId: application.id });
-          }
-        );
-      } else if (application.status === 'rejected') {
-        showErrorModal(
-          'Application Rejected',
-          `We're sorry, but your application for ${displayAnimal.name} was not approved. You can view the details or contact us for more information.`,
-          () => {
-            navigation.navigate('ApplicationDetails', { applicationId: application.id });
-          }
-        );
-      } else {
-        // For cancelled applications, allow reapplying
-        navigation.navigate('AdoptionApplication', { animal: displayAnimal });
-      }
-      return;
-    }
-    
-    // If no application exists, direct to the application form
+    // Navigate to the adoption application screen
     navigation.navigate('AdoptionApplication', { animal: displayAnimal });
+  };
+
+  const viewApplicationStatus = () => {
+    showInfoModal('Application Status', 
+      'Your application is currently being reviewed. ' +
+      'You will be notified once there is an update on your application status.'
+    );
+    
+    // Note: In a full implementation, this would navigate to an application details screen
+    // navigation.navigate('ApplicationStatus', { animalId: displayAnimal.id });
   };
 
   const handleContact = () => {
@@ -420,30 +435,35 @@ const AnimalDetailScreen = ({ route, navigation }) => {
               <TouchableOpacity
                 style={[
                   styles.adoptButton,
-                  displayAnimal.is_adopted && styles.adoptButtonDisabled
+                  displayAnimal.is_adopted && styles.adoptButtonDisabled,
+                  hasApplied && styles.applicationSubmittedButton
                 ]}
-                onPress={handleAdopt}
-                disabled={isDeleting || isAdopting || displayAnimal.is_adopted}
+                onPress={hasApplied ? viewApplicationStatus : handleAdopt}
+                disabled={isDeleting || isAdopting || displayAnimal.is_adopted || checkingApplication}
               >
                 <LinearGradient
-                  colors={displayAnimal.is_adopted ? 
-                    ['#aaaaaa', '#888888'] : 
-                    ['#a58fd8', '#8e74ae']}
+                  colors={
+                    displayAnimal.is_adopted ? ['#aaaaaa', '#888888'] :
+                    hasApplied ? ['#4CAF50', '#388E3C'] : 
+                    ['#a58fd8', '#8e74ae']
+                  }
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={styles.adoptButtonGradient}
                 >
                   <View style={styles.adoptButtonContent}>
-                    {isDeleting || isAdopting ? (
+                    {isDeleting || isAdopting || checkingApplication ? (
                       <ActivityIndicator color="#fff" size="small" />
                     ) : (
                       <>
-                        <Ionicons name="heart" size={20} color="#fff" />
+                        <Ionicons 
+                          name={hasApplied ? "checkmark-circle" : "paw"} 
+                          size={20} 
+                          color="#fff" 
+                        />
                         <Text style={styles.adoptButtonText}>
                           {displayAnimal.is_adopted ? 'Already Adopted' : 
-                          (applicationStatus?.hasApplication && 
-                           applicationStatus.applicationDetails?.status === 'pending') ? 
-                           'Application Pending' : 'Adopt Me!'}
+                           hasApplied ? 'View Application Status' : 'Adopt Me'}
                         </Text>
                       </>
                     )}

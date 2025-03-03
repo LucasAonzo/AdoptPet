@@ -318,29 +318,23 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   addAnimalButton: {
-    width: '70%',
-    marginTop: 10,
+    width: '100%',
+    marginTop: 15,
+    borderRadius: 12,
+    overflow: 'hidden',
   },
   addAnimalButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    padding: 14,
     borderRadius: 12,
-    padding: 12,
-    shadowColor: '#8e74ae',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 4,
   },
   addAnimalButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
-    marginLeft: 6,
+    marginLeft: 8,
   },
   animalsContainer: {
     flexDirection: 'row',
@@ -414,31 +408,38 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#8e74ae',
   },
-  
-  // Application Button Styles
-  applicationButton: {
-    alignSelf: 'center',
-    marginVertical: 20,
-    borderRadius: 25,
-    overflow: 'hidden',
-    elevation: 3,
-    shadowColor: '#8e74ae',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
+  applicationStatus: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    marginTop: 5,
+    alignSelf: 'flex-start',
   },
-  applicationButtonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
+  statusPending: {
+    backgroundColor: '#FFF9C4',
   },
-  applicationButtonText: {
-    color: 'white',
+  statusApproved: {
+    backgroundColor: '#C8E6C9',
+  },
+  statusRejected: {
+    backgroundColor: '#FFCDD2',
+  },
+  applicationStatusText: {
+    fontSize: 10,
     fontWeight: 'bold',
-    fontSize: 16,
-    marginLeft: 8,
+  },
+  adoptedTag: {
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    marginTop: 5,
+    alignSelf: 'flex-start',
+  },
+  adoptedTagText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
 });
 

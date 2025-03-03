@@ -315,14 +315,17 @@ const styles = StyleSheet.create({
     elevation: 8,
     overflow: 'hidden',
   },
+  adoptButtonDisabled: {
+    opacity: 0.7,
+  },
+  applicationSubmittedButton: {
+    shadowColor: '#4CAF50',
+  },
   adoptButtonGradient: {
     padding: 16,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 30,
-  },
-  adoptButtonDisabled: {
-    opacity: 0.7,
   },
   adoptButtonContent: {
     flexDirection: 'row',

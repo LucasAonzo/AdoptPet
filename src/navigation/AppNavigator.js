@@ -146,14 +146,8 @@ const AppNavigator = () => {
           animationEnabled: false,
         }}
       >
-        <Stack.Screen 
-          name="Home" 
-          component={HomeScreen} 
-        />
-        <Stack.Screen 
-          name="AnimalDetail" 
-          component={AnimalDetailScreen} 
-        />
+        <Stack.Screen name="Auth" component={AuthNavigator} />
+        <Stack.Screen name="Main" component={MainNavigator} />
       </Stack.Navigator>
     </NavigationContainer>
   );

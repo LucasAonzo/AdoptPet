@@ -21,7 +21,8 @@ export const useUserProfile = () => {
         return {
           profile: null,
           myAnimals: [],
-          adoptedAnimals: []
+          adoptedAnimals: [],
+          myApplications: []
         };
       }
       
@@ -70,8 +71,6 @@ export const useUserProfile = () => {
           throw postedError;
         }
         
-        
-        
         // Get animals adopted by user
         const { data: allAnimals, error: allAnimalsError } = await supabase
           .from('animals')
@@ -85,10 +84,36 @@ export const useUserProfile = () => {
           animal.user_id === userId && animal.is_adopted
         ) : [];
         
+        // Get user's adoption applications with animal details
+        const { data: applications, error: applicationsError } = await supabase
+          .from('adoption_applications')
+          .select(`
+            id, 
+            status, 
+            application_data, 
+            created_at,
+            animal_id,
+            animals (
+              id, 
+              name, 
+              species,
+              breed,
+              image_url,
+              is_adopted
+            )
+          `)
+          .eq('user_id', userId);
+        
+        if (applicationsError) {
+          console.error('Error fetching adoption applications:', applicationsError);
+          throw applicationsError;
+        }
+        
         return {
           profile: profileData,
           myAnimals: postedAnimals || [],
-          adoptedAnimals: adoptedByCurrentUser
+          adoptedAnimals: adoptedByCurrentUser,
+          myApplications: applications || []
         };
       } catch (error) {
         console.error('Error fetching user data:', error);

@@ -9,10 +9,7 @@ import ProfileScreen from '../screens/profile/ProfileScreen';
 import AddAnimalScreen from '../screens/animals/AddAnimalScreen';
 import AnimalDetailScreen from '../screens/animals/AnimalDetailScreen';
 import PublicationSuccessScreen from '../screens/animals/PublicationSuccessScreen';
-import AdoptionApplicationScreen from '../screens/animals/AdoptionApplicationScreen';
-import AdoptionSuccessScreen from '../screens/animals/AdoptionSuccessScreen';
-import ApplicationsScreen from '../screens/profile/ApplicationsScreen';
-import ApplicationDetailsScreen from '../screens/profile/ApplicationDetailsScreen';
+
 import SimpleDebugScreen from '../screens/profile/SimpleDebugScreen';
 
 const Tab = createBottomTabNavigator();
@@ -78,36 +75,14 @@ const HomeStackScreen = () => {
           gestureEnabled: false
         }}
       />
+      
+      {/* Add AdoptionApplicationScreen */}
       <HomeStack.Screen
         name="AdoptionApplication"
-        component={AdoptionApplicationScreen}
+        component={require('../screens/animals/AdoptionApplicationScreen').default}
         options={{
           title: 'Adoption Application',
-          gestureEnabled: true,
-          gestureResponseDistance: 50,
-        }}
-      />
-      <HomeStack.Screen
-        name="AdoptionSuccess"
-        component={AdoptionSuccessScreen}
-        options={{
-          title: 'Application Submitted',
-          headerShown: false,
-          gestureEnabled: false
-        }}
-      />
-      <HomeStack.Screen
-        name="Applications"
-        component={ApplicationsScreen}
-        options={{
-          title: 'My Applications',
-        }}
-      />
-      <HomeStack.Screen
-        name="ApplicationDetails"
-        component={ApplicationDetailsScreen}
-        options={{
-          title: 'Application Details',
+          headerShown: false
         }}
       />
     </HomeStack.Navigator>
@@ -219,28 +194,6 @@ const ProfileStackScreen = ({ navigation }) => {
         component={ProfileScreen}
         options={{
           title: 'Profile',
-          headerShown: false,
-        }}
-      />
-      
-      <ProfileStack.Screen
-        name="Applications"
-        component={ApplicationsScreen}
-        options={{
-          title: 'My Applications',
-          headerTitleStyle: {
-            color: '#ffffff',
-            fontSize: 18,
-            fontWeight: '600',
-          },
-        }}
-      />
-      
-      <ProfileStack.Screen
-        name="ApplicationDetails"
-        component={ApplicationDetailsScreen}
-        options={{
-          title: 'Application Details',
           headerShown: false,
         }}
       />

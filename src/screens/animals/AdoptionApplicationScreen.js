@@ -2,119 +2,115 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  ScrollView,
-  TouchableOpacity,
   TextInput,
-  Switch,
+  TouchableOpacity,
   StyleSheet,
+  ScrollView,
+  Alert,
+  SafeAreaView,
+  ActivityIndicator,
+  Switch,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
-  Alert,
-  InteractionManager,
+  Image,
+  StatusBar
 } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
-import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../context/AuthContext';
-import { useSubmitAdoptionApplication } from '../../hooks/useAdoptionMutations';
-import { OptimizedImage, SkeletonLoader } from '../../components/common';
+import supabase from '../../config/supabase';
 import * as Animatable from 'react-native-animatable';
-import { 
-  addBreadcrumb, 
-  safeExecute,
-  logErrorToFile,
-  flushMemoryLogs
-} from '../../utils/debugUtils';
 
-const AdoptionApplicationScreen = ({ route }) => {
+const AdoptionApplicationScreen = ({ route, navigation }) => {
   const { animal } = route.params;
-  const navigation = useNavigation();
   const { user } = useAuth();
-  const { mutate: submitApplication, isPending: isSubmitting } = useSubmitAdoptionApplication();
-  
-  // Animation and transition states
+  const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [isTransitioning, setIsTransitioning] = useState(false);
   
   // Form state
-  const [form, setForm] = useState({
-    // Personal Information
-    fullName: user?.name || '',
+  const [formData, setFormData] = useState({
+    // Step 1: Personal Information
+    fullName: user?.user_metadata?.name || '',
     email: user?.email || '',
     phone: '',
     address: '',
     
-    // Housing Information
-    housingType: 'apartment', // apartment, house, other
+    // Step 2: Housing Information
+    housingType: 'apartment',
     hasYard: false,
-    ownOrRent: 'rent', // own, rent
+    ownOrRent: 'rent',
     landlordApproval: false,
     
-    // Lifestyle
+    // Step 3: Lifestyle Information
     hoursAway: '',
     hasChildren: false,
     hasOtherPets: false,
     otherPetsDescription: '',
     
-    // Experience
+    // Step 4: Experience & Planning
     hasPetExperience: false,
     experienceDescription: '',
-    
-    // Other
     reasonForAdoption: '',
     veterinarianInfo: '',
     emergencyPlan: '',
     
-    // Agreement
+    // Step 5: Agreement
     agreeToTerms: false,
-    agreeToHomeVisit: false,
+    agreeToHomeVisit: false
   });
   
   // Form validation
   const [errors, setErrors] = useState({});
-  
+
+  // Handle input changes
+  const handleInputChange = (field, value) => {
+    setFormData({
+      ...formData,
+      [field]: value
+    });
+  };
+
   // Validate current step
   const validateStep = (step) => {
     const newErrors = {};
     
     if (step === 1) {
-      if (!form.fullName.trim()) newErrors.fullName = 'Full name is required';
-      if (!form.email.trim()) newErrors.email = 'Email is required';
-      if (!/^\S+@\S+\.\S+$/.test(form.email)) newErrors.email = 'Email is invalid';
-      if (!form.phone.trim()) newErrors.phone = 'Phone number is required';
-      if (!form.address.trim()) newErrors.address = 'Address is required';
+      if (!formData.fullName.trim()) newErrors.fullName = 'Full name is required';
+      if (!formData.email.trim()) newErrors.email = 'Email is required';
+      if (!/^\S+@\S+\.\S+$/.test(formData.email)) newErrors.email = 'Email is invalid';
+      if (!formData.phone.trim()) newErrors.phone = 'Phone number is required';
+      if (!formData.address.trim()) newErrors.address = 'Address is required';
     }
     
     if (step === 2) {
-      if (form.ownOrRent === 'rent' && !form.landlordApproval) {
+      if (formData.ownOrRent === 'rent' && !formData.landlordApproval) {
         newErrors.landlordApproval = 'Landlord approval is required for renting';
       }
     }
     
     if (step === 3) {
-      if (!form.hoursAway.trim()) newErrors.hoursAway = 'This field is required';
-      if (form.hasOtherPets && !form.otherPetsDescription.trim()) {
+      if (!formData.hoursAway.trim()) newErrors.hoursAway = 'This field is required';
+      if (formData.hasOtherPets && !formData.otherPetsDescription.trim()) {
         newErrors.otherPetsDescription = 'Please describe your other pets';
       }
     }
     
     if (step === 4) {
-      if (!form.reasonForAdoption.trim()) newErrors.reasonForAdoption = 'This field is required';
-      if (!form.emergencyPlan.trim()) newErrors.emergencyPlan = 'Emergency plan is required';
+      if (!formData.reasonForAdoption.trim()) newErrors.reasonForAdoption = 'This field is required';
+      if (!formData.emergencyPlan.trim()) newErrors.emergencyPlan = 'Emergency plan is required';
     }
     
     if (step === 5) {
-      if (!form.agreeToTerms) newErrors.agreeToTerms = 'You must agree to the terms';
-      if (!form.agreeToHomeVisit) newErrors.agreeToHomeVisit = 'You must agree to a home visit';
+      if (!formData.agreeToTerms) newErrors.agreeToTerms = 'You must agree to the terms';
+      if (!formData.agreeToHomeVisit) newErrors.agreeToHomeVisit = 'You must agree to a home visit';
     }
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-  
-  // Handle next step
+
+  // Next step handler
   const handleNextStep = () => {
     if (validateStep(currentStep)) {
       setIsTransitioning(true);
@@ -124,192 +120,104 @@ const AdoptionApplicationScreen = ({ route }) => {
       }, 300);
     }
   };
-  
-  // Handle previous step
+
+  // Previous step handler
   const handlePreviousStep = () => {
-    if (currentStep > 1) {
-      setIsTransitioning(true);
-      setTimeout(() => {
-        setCurrentStep(currentStep - 1);
-        setIsTransitioning(false);
-      }, 300);
-    } else {
-      navigation.goBack();
-    }
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setCurrentStep(currentStep - 1);
+      setIsTransitioning(false);
+    }, 300);
   };
-  
-  // Handle form field changes
-  const handleChange = (field, value) => {
-    setForm({
-      ...form,
-      [field]: value,
-    });
-    
-    // Clear error when field is updated
-    if (errors[field]) {
-      setErrors({
-        ...errors,
-        [field]: null,
-      });
-    }
-  };
-  
-  // Handle form submission
+
+  // Form submission handler
   const handleSubmit = async () => {
+    if (!validateStep(5)) {
+      return;
+    }
+    
+    setLoading(true);
+    console.log('Starting submission process...');
+    console.log('User ID:', user?.id);
+    console.log('Animal ID:', animal?.id);
+    
     try {
-      addBreadcrumb('Submit button pressed', { animal: animal.id });
-      
-      // Validate form first
-      if (!validateStep(currentStep)) {
-        addBreadcrumb('Form validation failed', { step: currentStep, errors });
-        return;
-      }
-      
-      addBreadcrumb('Form validation passed', { step: currentStep });
-      
-      // No need to set isSubmitting, it will be handled by the React Query hook
-      
-      // Prepare application data
+      // Prepare the data to be saved
       const applicationData = {
-        animalId: animal.id,
-        form: form,
+        user_id: user.id,
+        animal_id: animal.id,
+        status: 'pending',
+        application_data: {
+          ...formData,
+          submittedAt: new Date().toISOString(),
+          animalName: animal.name
+        }
       };
       
-      addBreadcrumb('Application data prepared', { animalId: animal.id });
-      await flushMemoryLogs();
+      console.log('Application data prepared:', JSON.stringify(applicationData));
       
-      // 1. FIRST: Submit the application data
-      try {
-        addBreadcrumb('Beginning submission to database');
+      // Save to Supabase
+      console.log('Sending request to Supabase...');
+      const { data, error } = await supabase
+        .from('adoption_applications')
+        .insert(applicationData)
+        .select();
         
-        // Use safeExecute to prevent crashes during submission
-        await safeExecute(async () => {
-          return new Promise((resolve, reject) => {
-            submitApplication(applicationData, {
-              onSuccess: (data) => {
-                addBreadcrumb('Application submitted successfully', { id: data?.id });
-                console.log('Application submitted successfully', data);
-                resolve(data);
-              },
-              onError: (error) => {
-                addBreadcrumb('Error submitting application', { error: error?.message });
-                console.error('Error submitting application:', error);
-                reject(error);
-              }
-            });
-          });
-        }, 'application_submission');
-        
-        addBreadcrumb('Database submission completed successfully');
-        await flushMemoryLogs();
-        
-        // 2. SECOND: Show success alert
-        addBreadcrumb('Showing success alert');
-        
-        // Wait for alert to be acknowledged
-        await new Promise(resolve => {
-          Alert.alert(
-            'Application Submitted',
-            `Thank you for applying to adopt ${animal.name}. Our team will review your application shortly.`,
-            [{ 
-              text: 'OK',
-              onPress: () => {
-                addBreadcrumb('Alert OK button pressed');
-                resolve();
-              } 
-            }],
-            { cancelable: false } // Prevent dismissing by tapping outside
-          );
-        });
-        
-        addBreadcrumb('Alert acknowledged, proceeding to navigation');
-        await flushMemoryLogs();
-        
-        // 3. THIRD: Navigate to home screen
-        addBreadcrumb('Attempting navigation');
-        
-        // Wait for any pending interactions to complete
-        await new Promise(resolve => {
-          InteractionManager.runAfterInteractions(() => {
-            resolve();
-          });
-        });
-        
-        navigation.navigate('Home');
-        addBreadcrumb('Navigation completed');
-        
-      } catch (submitError) {
-        // Handle submission errors
-        addBreadcrumb('Error in submission process', { error: submitError?.message });
-        console.error('Error in submission process:', submitError);
-        
-        await logErrorToFile({
-          type: 'submission_error',
-          message: submitError?.message || 'Unknown submission error',
-          stack: submitError?.stack,
-          timestamp: new Date().toISOString()
-        });
-        
-        // Show error alert and stay on current screen
+      if (error) {
+        console.error('Error submitting application:', error);
+        console.error('Error details:', JSON.stringify(error));
         Alert.alert(
-          'Submission Error',
-          'There was a problem submitting your application. Please try again later.',
-          [{ text: 'OK' }]
+          'Submission Error', 
+          `There was a problem saving your application: ${error.message || 'Unknown error'}`
         );
-      } finally {
-        // No need to manually set isSubmitting since React Query handles it
-        await flushMemoryLogs();
+      } else {
+        console.log('Application submitted successfully:', data);
+        // Show success alert
+        Alert.alert(
+          'Application Submitted',
+          `Thank you for applying to adopt ${animal.name}! We will review your application and get back to you soon.`,
+          [
+            { 
+              text: 'OK', 
+              onPress: () => {
+                // Return to previous screen with a refresh parameter
+                navigation.navigate('AnimalDetail', {
+                  animal: animal,
+                  applicationSubmitted: true,
+                  refreshTimestamp: new Date().getTime()
+                });
+              }
+            }
+          ]
+        );
       }
-      
     } catch (error) {
-      // Handle general errors in the submission flow
-      addBreadcrumb('General error in handleSubmit', { error: error?.message });
-      console.error('General error in handleSubmit:', error);
-      
-      await logErrorToFile({
-        type: 'general_submission_error',
-        message: error?.message || 'Unknown general error',
-        stack: error?.stack,
-        timestamp: new Date().toISOString()
-      });
-      
-      // No need to manually set isSubmitting since React Query handles it
-      
-      // Show general error alert
-      try {
-        Alert.alert('Error', 'An unexpected error occurred. Please try again later.');
-      } catch (alertError) {
-        console.error('Failed to show error alert:', alertError);
-      }
-      
-      // Force log flush on error
-      await flushMemoryLogs().catch(err => {
-        console.error('Failed to flush logs after error:', err);
-      });
+      console.error('Exception during submission:', error);
+      console.error('Error stack:', error.stack);
+      Alert.alert(
+        'Submission Error', 
+        `An unexpected error occurred: ${error.message || 'Unknown error'}`
+      );
+    } finally {
+      setLoading(false);
     }
   };
-  
-  // Render form based on current step
+
+  // Render different form sections based on current step
   const renderForm = () => {
     switch (currentStep) {
-      case 1:
-        return renderPersonalInfoForm();
-      case 2:
-        return renderHousingInfoForm();
-      case 3:
-        return renderLifestyleForm();
-      case 4:
-        return renderExperienceForm();
-      case 5:
-        return renderAgreementForm();
-      default:
-        return null;
+      case 1: return renderPersonalInfoForm();
+      case 2: return renderHousingInfoForm();
+      case 3: return renderLifestyleForm();
+      case 4: return renderExperienceForm();
+      case 5: return renderAgreementForm();
+      default: return null;
     }
   };
-  
-  // Render personal information form
+
+  // Render personal information form (Step 1)
   const renderPersonalInfoForm = () => (
-    <Animatable.View 
+    <Animatable.View
       animation={isTransitioning ? "fadeOutLeft" : "fadeInRight"}
       duration={300}
       style={styles.formSection}
@@ -323,8 +231,8 @@ const AdoptionApplicationScreen = ({ route }) => {
         <Text style={styles.label}>Full Name</Text>
         <TextInput
           style={[styles.input, errors.fullName && styles.inputError]}
-          value={form.fullName}
-          onChangeText={(value) => handleChange('fullName', value)}
+          value={formData.fullName}
+          onChangeText={(value) => handleInputChange('fullName', value)}
           placeholder="Enter your full name"
         />
         {errors.fullName && <Text style={styles.errorText}>{errors.fullName}</Text>}
@@ -334,8 +242,8 @@ const AdoptionApplicationScreen = ({ route }) => {
         <Text style={styles.label}>Email</Text>
         <TextInput
           style={[styles.input, errors.email && styles.inputError]}
-          value={form.email}
-          onChangeText={(value) => handleChange('email', value)}
+          value={formData.email}
+          onChangeText={(value) => handleInputChange('email', value)}
           placeholder="Enter your email"
           keyboardType="email-address"
           autoCapitalize="none"
@@ -347,8 +255,8 @@ const AdoptionApplicationScreen = ({ route }) => {
         <Text style={styles.label}>Phone Number</Text>
         <TextInput
           style={[styles.input, errors.phone && styles.inputError]}
-          value={form.phone}
-          onChangeText={(value) => handleChange('phone', value)}
+          value={formData.phone}
+          onChangeText={(value) => handleInputChange('phone', value)}
           placeholder="Enter your phone number"
           keyboardType="phone-pad"
         />
@@ -359,8 +267,8 @@ const AdoptionApplicationScreen = ({ route }) => {
         <Text style={styles.label}>Address</Text>
         <TextInput
           style={[styles.input, errors.address && styles.inputError]}
-          value={form.address}
-          onChangeText={(value) => handleChange('address', value)}
+          value={formData.address}
+          onChangeText={(value) => handleInputChange('address', value)}
           placeholder="Enter your address"
           multiline
           numberOfLines={3}
@@ -369,10 +277,10 @@ const AdoptionApplicationScreen = ({ route }) => {
       </View>
     </Animatable.View>
   );
-  
-  // Render housing information form
+
+  // Render housing information form (Step 2)
   const renderHousingInfoForm = () => (
-    <Animatable.View 
+    <Animatable.View
       animation={isTransitioning ? "fadeOutLeft" : "fadeInRight"}
       duration={300}
       style={styles.formSection}
@@ -388,9 +296,9 @@ const AdoptionApplicationScreen = ({ route }) => {
           <TouchableOpacity
             style={[
               styles.radioButton,
-              form.housingType === 'apartment' && styles.radioButtonSelected
+              formData.housingType === 'apartment' && styles.radioButtonSelected
             ]}
-            onPress={() => handleChange('housingType', 'apartment')}
+            onPress={() => handleInputChange('housingType', 'apartment')}
           >
             <Text style={styles.radioButtonText}>Apartment</Text>
           </TouchableOpacity>
@@ -398,9 +306,9 @@ const AdoptionApplicationScreen = ({ route }) => {
           <TouchableOpacity
             style={[
               styles.radioButton,
-              form.housingType === 'house' && styles.radioButtonSelected
+              formData.housingType === 'house' && styles.radioButtonSelected
             ]}
-            onPress={() => handleChange('housingType', 'house')}
+            onPress={() => handleInputChange('housingType', 'house')}
           >
             <Text style={styles.radioButtonText}>House</Text>
           </TouchableOpacity>
@@ -408,9 +316,9 @@ const AdoptionApplicationScreen = ({ route }) => {
           <TouchableOpacity
             style={[
               styles.radioButton,
-              form.housingType === 'other' && styles.radioButtonSelected
+              formData.housingType === 'other' && styles.radioButtonSelected
             ]}
-            onPress={() => handleChange('housingType', 'other')}
+            onPress={() => handleInputChange('housingType', 'other')}
           >
             <Text style={styles.radioButtonText}>Other</Text>
           </TouchableOpacity>
@@ -421,10 +329,10 @@ const AdoptionApplicationScreen = ({ route }) => {
         <View style={styles.switchRow}>
           <Text style={styles.label}>Do you have a yard?</Text>
           <Switch
-            value={form.hasYard}
-            onValueChange={(value) => handleChange('hasYard', value)}
+            value={formData.hasYard}
+            onValueChange={(value) => handleInputChange('hasYard', value)}
             trackColor={{ false: '#d1d1d1', true: '#a58fd8' }}
-            thumbColor={form.hasYard ? '#8e74ae' : '#f4f3f4'}
+            thumbColor={formData.hasYard ? '#8e74ae' : '#f4f3f4'}
           />
         </View>
       </View>
@@ -435,9 +343,9 @@ const AdoptionApplicationScreen = ({ route }) => {
           <TouchableOpacity
             style={[
               styles.radioButton,
-              form.ownOrRent === 'own' && styles.radioButtonSelected
+              formData.ownOrRent === 'own' && styles.radioButtonSelected
             ]}
-            onPress={() => handleChange('ownOrRent', 'own')}
+            onPress={() => handleInputChange('ownOrRent', 'own')}
           >
             <Text style={styles.radioButtonText}>Own</Text>
           </TouchableOpacity>
@@ -445,53 +353,51 @@ const AdoptionApplicationScreen = ({ route }) => {
           <TouchableOpacity
             style={[
               styles.radioButton,
-              form.ownOrRent === 'rent' && styles.radioButtonSelected
+              formData.ownOrRent === 'rent' && styles.radioButtonSelected
             ]}
-            onPress={() => handleChange('ownOrRent', 'rent')}
+            onPress={() => handleInputChange('ownOrRent', 'rent')}
           >
             <Text style={styles.radioButtonText}>Rent</Text>
           </TouchableOpacity>
         </View>
       </View>
       
-      {form.ownOrRent === 'rent' && (
+      {formData.ownOrRent === 'rent' && (
         <View style={styles.formGroup}>
           <View style={styles.switchRow}>
             <Text style={styles.label}>Do you have landlord approval for pets?</Text>
             <Switch
-              value={form.landlordApproval}
-              onValueChange={(value) => handleChange('landlordApproval', value)}
+              value={formData.landlordApproval}
+              onValueChange={(value) => handleInputChange('landlordApproval', value)}
               trackColor={{ false: '#d1d1d1', true: '#a58fd8' }}
-              thumbColor={form.landlordApproval ? '#8e74ae' : '#f4f3f4'}
+              thumbColor={formData.landlordApproval ? '#8e74ae' : '#f4f3f4'}
             />
           </View>
-          {errors.landlordApproval && (
-            <Text style={styles.errorText}>{errors.landlordApproval}</Text>
-          )}
+          {errors.landlordApproval && <Text style={styles.errorText}>{errors.landlordApproval}</Text>}
         </View>
       )}
     </Animatable.View>
   );
-  
-  // Render lifestyle form
+
+  // Render lifestyle information form (Step 3)
   const renderLifestyleForm = () => (
-    <Animatable.View 
+    <Animatable.View
       animation={isTransitioning ? "fadeOutLeft" : "fadeInRight"}
       duration={300}
       style={styles.formSection}
     >
       <Text style={styles.sectionTitle}>Lifestyle Information</Text>
       <Text style={styles.sectionDescription}>
-        Help us understand your daily routine and household to find the perfect match.
+        Help us understand your daily routine and household situation.
       </Text>
       
       <View style={styles.formGroup}>
-        <Text style={styles.label}>How many hours are you away from home on average?</Text>
+        <Text style={styles.label}>How many hours per day will the pet be left alone?</Text>
         <TextInput
           style={[styles.input, errors.hoursAway && styles.inputError]}
-          value={form.hoursAway}
-          onChangeText={(value) => handleChange('hoursAway', value)}
-          placeholder="e.g., 8 hours"
+          value={formData.hoursAway}
+          onChangeText={(value) => handleInputChange('hoursAway', value)}
+          placeholder="e.g., 4-6 hours"
           keyboardType="number-pad"
         />
         {errors.hoursAway && <Text style={styles.errorText}>{errors.hoursAway}</Text>}
@@ -501,10 +407,10 @@ const AdoptionApplicationScreen = ({ route }) => {
         <View style={styles.switchRow}>
           <Text style={styles.label}>Do you have children in your home?</Text>
           <Switch
-            value={form.hasChildren}
-            onValueChange={(value) => handleChange('hasChildren', value)}
+            value={formData.hasChildren}
+            onValueChange={(value) => handleInputChange('hasChildren', value)}
             trackColor={{ false: '#d1d1d1', true: '#a58fd8' }}
-            thumbColor={form.hasChildren ? '#8e74ae' : '#f4f3f4'}
+            thumbColor={formData.hasChildren ? '#8e74ae' : '#f4f3f4'}
           />
         </View>
       </View>
@@ -513,36 +419,34 @@ const AdoptionApplicationScreen = ({ route }) => {
         <View style={styles.switchRow}>
           <Text style={styles.label}>Do you have other pets?</Text>
           <Switch
-            value={form.hasOtherPets}
-            onValueChange={(value) => handleChange('hasOtherPets', value)}
+            value={formData.hasOtherPets}
+            onValueChange={(value) => handleInputChange('hasOtherPets', value)}
             trackColor={{ false: '#d1d1d1', true: '#a58fd8' }}
-            thumbColor={form.hasOtherPets ? '#8e74ae' : '#f4f3f4'}
+            thumbColor={formData.hasOtherPets ? '#8e74ae' : '#f4f3f4'}
           />
         </View>
       </View>
       
-      {form.hasOtherPets && (
+      {formData.hasOtherPets && (
         <View style={styles.formGroup}>
           <Text style={styles.label}>Please describe your other pets</Text>
           <TextInput
             style={[styles.input, errors.otherPetsDescription && styles.inputError]}
-            value={form.otherPetsDescription}
-            onChangeText={(value) => handleChange('otherPetsDescription', value)}
-            placeholder="Type, breed, age, temperament, etc."
+            value={formData.otherPetsDescription}
+            onChangeText={(value) => handleInputChange('otherPetsDescription', value)}
+            placeholder="Types, ages, temperament, etc."
             multiline
             numberOfLines={3}
           />
-          {errors.otherPetsDescription && (
-            <Text style={styles.errorText}>{errors.otherPetsDescription}</Text>
-          )}
+          {errors.otherPetsDescription && <Text style={styles.errorText}>{errors.otherPetsDescription}</Text>}
         </View>
       )}
     </Animatable.View>
   );
-  
-  // Render experience form
+
+  // Render experience and planning form (Step 4)
   const renderExperienceForm = () => (
-    <Animatable.View 
+    <Animatable.View
       animation={isTransitioning ? "fadeOutLeft" : "fadeInRight"}
       duration={300}
       style={styles.formSection}
@@ -556,21 +460,21 @@ const AdoptionApplicationScreen = ({ route }) => {
         <View style={styles.switchRow}>
           <Text style={styles.label}>Do you have experience with pets?</Text>
           <Switch
-            value={form.hasPetExperience}
-            onValueChange={(value) => handleChange('hasPetExperience', value)}
+            value={formData.hasPetExperience}
+            onValueChange={(value) => handleInputChange('hasPetExperience', value)}
             trackColor={{ false: '#d1d1d1', true: '#a58fd8' }}
-            thumbColor={form.hasPetExperience ? '#8e74ae' : '#f4f3f4'}
+            thumbColor={formData.hasPetExperience ? '#8e74ae' : '#f4f3f4'}
           />
         </View>
       </View>
       
-      {form.hasPetExperience && (
+      {formData.hasPetExperience && (
         <View style={styles.formGroup}>
           <Text style={styles.label}>Please describe your experience</Text>
           <TextInput
             style={styles.input}
-            value={form.experienceDescription}
-            onChangeText={(value) => handleChange('experienceDescription', value)}
+            value={formData.experienceDescription}
+            onChangeText={(value) => handleInputChange('experienceDescription', value)}
             placeholder="Past pets, experience with this breed/species, etc."
             multiline
             numberOfLines={3}
@@ -582,8 +486,8 @@ const AdoptionApplicationScreen = ({ route }) => {
         <Text style={styles.label}>Why do you want to adopt {animal.name}?</Text>
         <TextInput
           style={[styles.input, errors.reasonForAdoption && styles.inputError]}
-          value={form.reasonForAdoption}
-          onChangeText={(value) => handleChange('reasonForAdoption', value)}
+          value={formData.reasonForAdoption}
+          onChangeText={(value) => handleInputChange('reasonForAdoption', value)}
           placeholder="Tell us your reasons for wanting to adopt"
           multiline
           numberOfLines={3}
@@ -597,8 +501,8 @@ const AdoptionApplicationScreen = ({ route }) => {
         <Text style={styles.label}>Veterinarian Information (if any)</Text>
         <TextInput
           style={styles.input}
-          value={form.veterinarianInfo}
-          onChangeText={(value) => handleChange('veterinarianInfo', value)}
+          value={formData.veterinarianInfo}
+          onChangeText={(value) => handleInputChange('veterinarianInfo', value)}
           placeholder="Name and contact information of your veterinarian"
           multiline
           numberOfLines={2}
@@ -609,8 +513,8 @@ const AdoptionApplicationScreen = ({ route }) => {
         <Text style={styles.label}>Emergency Plan</Text>
         <TextInput
           style={[styles.input, errors.emergencyPlan && styles.inputError]}
-          value={form.emergencyPlan}
-          onChangeText={(value) => handleChange('emergencyPlan', value)}
+          value={formData.emergencyPlan}
+          onChangeText={(value) => handleInputChange('emergencyPlan', value)}
           placeholder="What's your plan in case of emergency or if you can no longer care for the pet?"
           multiline
           numberOfLines={3}
@@ -621,10 +525,10 @@ const AdoptionApplicationScreen = ({ route }) => {
       </View>
     </Animatable.View>
   );
-  
-  // Render agreement form
+
+  // Render agreement form (Step 5)
   const renderAgreementForm = () => (
-    <Animatable.View 
+    <Animatable.View
       animation={isTransitioning ? "fadeOutLeft" : "fadeInRight"}
       duration={300}
       style={styles.formSection}
@@ -637,11 +541,10 @@ const AdoptionApplicationScreen = ({ route }) => {
       <View style={styles.formGroup}>
         <View style={styles.checkboxContainer}>
           <Switch
-            value={form.agreeToTerms}
-            onValueChange={(value) => handleChange('agreeToTerms', value)}
+            value={formData.agreeToTerms}
+            onValueChange={(value) => handleInputChange('agreeToTerms', value)}
             trackColor={{ false: '#d1d1d1', true: '#4CAF50' }}
-            thumbColor={form.agreeToTerms ? '#fff' : '#f4f3f4'}
-            ios_backgroundColor="#d1d1d1"
+            thumbColor={formData.agreeToTerms ? '#fff' : '#f4f3f4'}
           />
           <Text style={styles.checkboxLabel}>
             I agree to the terms and conditions of the adoption process.
@@ -653,11 +556,10 @@ const AdoptionApplicationScreen = ({ route }) => {
       <View style={styles.formGroup}>
         <View style={styles.checkboxContainer}>
           <Switch
-            value={form.agreeToHomeVisit}
-            onValueChange={(value) => handleChange('agreeToHomeVisit', value)}
+            value={formData.agreeToHomeVisit}
+            onValueChange={(value) => handleInputChange('agreeToHomeVisit', value)}
             trackColor={{ false: '#d1d1d1', true: '#4CAF50' }}
-            thumbColor={form.agreeToHomeVisit ? '#fff' : '#f4f3f4'}
-            ios_backgroundColor="#d1d1d1"
+            thumbColor={formData.agreeToHomeVisit ? '#fff' : '#f4f3f4'}
           />
           <Text style={styles.checkboxLabel}>
             I agree to a home visit as part of the adoption process.
@@ -665,16 +567,24 @@ const AdoptionApplicationScreen = ({ route }) => {
         </View>
         {errors.agreeToHomeVisit && <Text style={styles.errorText}>{errors.agreeToHomeVisit}</Text>}
       </View>
+      
+      <View style={styles.termsContainer}>
+        <Text style={styles.termsText}>
+          By submitting this application, I confirm that all information provided is truthful and accurate. 
+          I understand that providing false information may result in my application being rejected. 
+          The shelter reserves the right to deny any application based on the best interest of the animal.
+        </Text>
+      </View>
     </Animatable.View>
   );
-  
-  // Set navigation options on mount
+
+  // Set navigation options
   useEffect(() => {
     navigation.setOptions({
       title: 'Adoption Application',
       headerShown: true,
       headerStyle: {
-        backgroundColor: '#8e74ae',
+        backgroundColor: '#9370db',
       },
       headerTintColor: '#fff',
       headerTitleStyle: {
@@ -684,37 +594,34 @@ const AdoptionApplicationScreen = ({ route }) => {
       headerLeft: () => (
         <TouchableOpacity
           style={{ marginLeft: 16 }}
-          onPress={handlePreviousStep}
+          onPress={() => navigation.goBack()}
         >
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
       ),
     });
   }, [navigation]);
-  
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
     >
-      <StatusBar style="light" backgroundColor="#8e74ae" />
-      
+      <StatusBar style="light" backgroundColor="#9370db" />
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Animal summary */}
         <View style={styles.animalSummary}>
-          <OptimizedImage
-            source={animal.image_url}
+          <Image
+            source={{ uri: animal.image_url || 'https://via.placeholder.com/150' }}
             style={styles.animalImage}
-            contentFit="cover"
-            transitionDuration={300}
           />
           <View style={styles.animalInfo}>
             <Text style={styles.animalName}>{animal.name}</Text>
-            <Text style={styles.animalSpecies}>{animal.species} • {animal.breed}</Text>
+            <Text style={styles.animalSpecies}>{animal.type} • {animal.breed}</Text>
           </View>
         </View>
-        
+
         {/* Progress bar */}
         <View style={styles.progressContainer}>
           <View style={styles.progressBar}>
@@ -727,16 +634,16 @@ const AdoptionApplicationScreen = ({ route }) => {
           </View>
           <Text style={styles.progressText}>Step {currentStep} of 5</Text>
         </View>
-        
-        {/* Form sections based on current step */}
+
+        {/* Dynamic Form Content */}
         {renderForm()}
-        
-        {/* Navigation buttons */}
+
+        {/* Navigation Buttons */}
         <View style={styles.buttonContainer}>
           <TouchableOpacity
             style={styles.backButton}
-            onPress={handlePreviousStep}
-            disabled={isSubmitting}
+            onPress={currentStep === 1 ? () => navigation.goBack() : handlePreviousStep}
+            disabled={loading}
           >
             <Text style={styles.backButtonText}>
               {currentStep === 1 ? 'Cancel' : 'Back'}
@@ -747,36 +654,36 @@ const AdoptionApplicationScreen = ({ route }) => {
             <TouchableOpacity
               style={styles.nextButton}
               onPress={handleNextStep}
-              disabled={isSubmitting}
+              disabled={loading}
             >
               <LinearGradient
-                colors={['#a58fd8', '#8e74ae']}
+                colors={['#a58fd8', '#9370db']}
                 style={styles.nextButtonGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
               >
                 <Text style={styles.nextButtonText}>Next</Text>
-                <Ionicons name="arrow-forward" size={20} color="#fff" />
+                <Ionicons name="arrow-forward" size={16} color="#fff" />
               </LinearGradient>
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
               style={styles.submitButton}
               onPress={handleSubmit}
-              disabled={isSubmitting}
+              disabled={loading}
             >
               <LinearGradient
-                colors={['#a58fd8', '#8e74ae']}
+                colors={['#a58fd8', '#9370db']}
                 style={styles.submitButtonGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
               >
-                {isSubmitting ? (
+                {loading ? (
                   <ActivityIndicator color="#fff" size="small" />
                 ) : (
                   <>
                     <Text style={styles.submitButtonText}>Submit Application</Text>
-                    <Ionicons name="paper-plane" size={20} color="#fff" />
+                    <Ionicons name="paper-plane" size={16} color="#fff" />
                   </>
                 )}
               </LinearGradient>
@@ -839,7 +746,7 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#8e74ae',
+    backgroundColor: '#9370db',
     borderRadius: 4,
   },
   progressText: {
@@ -907,12 +814,15 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   radioButtonSelected: {
-    backgroundColor: '#8e74ae',
-    borderColor: '#8e74ae',
+    backgroundColor: '#9370db',
+    borderColor: '#9370db',
   },
   radioButtonText: {
     fontSize: 14,
     color: '#333',
+  },
+  radioButtonTextSelected: {
+    color: '#fff',
   },
   checkboxContainer: {
     flexDirection: 'row',
@@ -924,52 +834,16 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
   },
-  submitButton: {
-    backgroundColor: '#8e74ae',
-    paddingVertical: 14,
+  termsContainer: {
+    backgroundColor: '#f5f5f5',
+    padding: 12,
     borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 20,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    marginTop: 16,
   },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  loadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  disabledButton: {
-    opacity: 0.7,
-    backgroundColor: '#666',
-  },
-  submitButtonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-  },
-  submitButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '500',
-    marginRight: 8,
-  },
-  successText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginTop: 20,
+  termsText: {
+    fontSize: 12,
+    color: '#666',
+    lineHeight: 18,
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -984,10 +858,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#8e74ae',
+    borderColor: '#9370db',
   },
   backButtonText: {
-    color: '#8e74ae',
+    color: '#9370db',
     fontSize: 16,
     fontWeight: '500',
   },
@@ -998,7 +872,7 @@ const styles = StyleSheet.create({
   nextButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 8,
   },
@@ -1008,10 +882,14 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginRight: 8,
   },
+  submitButton: {
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
   submitButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 8,
   },
@@ -1020,7 +898,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     marginRight: 8,
-  },
+  }
 });
 
 export default AdoptionApplicationScreen; 

@@ -405,6 +405,221 @@ const clearBreadcrumbs = async () => {
   }
 };
 
+// Function to wrap network operations with specific error handling for Supabase
+const safeNetworkOperation = async (operation, operationName = 'database_operation') => {
+  const startTime = Date.now();
+  
+  try {
+    // Add breadcrumb at the start of operation
+    addBreadcrumb(`Starting ${operationName}`, { timestamp: new Date().toISOString() });
+    
+    // Execute the operation
+    const result = await Promise.race([
+      operation(),
+      // Add a timeout to prevent hanging operations
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error(`${operationName} timed out after 15 seconds`)), 15000)
+      )
+    ]);
+    
+    // Log success
+    const duration = Date.now() - startTime;
+    addBreadcrumb(`${operationName} completed successfully`, { 
+      duration: `${duration}ms`,
+      timestamp: new Date().toISOString()
+    });
+    
+    return result;
+  } catch (error) {
+    // Calculate duration even for failed operations
+    const duration = Date.now() - startTime;
+    
+    // Determine if this is a network error
+    const isNetworkError = 
+      error.message?.includes('network') || 
+      error.message?.includes('timeout') ||
+      error.message?.includes('Network request failed');
+    
+    // Construct detailed error info
+    const errorInfo = {
+      type: isNetworkError ? 'network_error' : 'database_error',
+      operation: operationName,
+      message: error.message || 'Unknown error',
+      stack: error.stack || 'No stack trace',
+      statusCode: error.status || error.statusCode,
+      duration: `${duration}ms`,
+      timestamp: new Date().toISOString()
+    };
+    
+    // Log the error immediately
+    console.error(`Error in ${operationName}:`, error);
+    addBreadcrumb(`Error in ${operationName}`, { 
+      error: errorInfo.message,
+      duration: errorInfo.duration 
+    });
+    
+    // Safely log to file without throwing
+    try {
+      logErrorToFile(errorInfo).catch(e => 
+        console.error('Failed to log network error to file:', e)
+      );
+    } catch (loggingError) {
+      console.error('Error during error logging:', loggingError);
+    }
+    
+    // Immediately try to flush logs to ensure they're saved
+    try {
+      flushMemoryLogs().catch(e => 
+        console.error('Failed to flush logs after network error:', e)
+      );
+    } catch (flushError) {
+      console.error('Error during log flushing:', flushError);
+    }
+    
+    // Rethrow with a more user-friendly message
+    throw new Error(
+      isNetworkError 
+        ? 'Network connection issue. Please check your internet and try again.'
+        : `Database operation failed: ${error.message}`
+    );
+  }
+};
+
+// Function specifically for handling form submission operations
+const safeFormSubmission = async (formData, submitOperation, formName = 'form') => {
+  try {
+    // Validate form data minimally
+    if (!formData) {
+      throw new Error('Form data is missing');
+    }
+    
+    // Log form submission attempt
+    addBreadcrumb(`Submitting ${formName}`, {
+      hasData: !!formData,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Execute the submission with network safety
+    return await safeNetworkOperation(
+      () => submitOperation(formData),
+      `${formName}_submission`
+    );
+  } catch (error) {
+    // Add form-specific context to the error
+    console.error(`Error submitting ${formName}:`, error);
+    
+    // Log detailed form error (excluding sensitive data)
+    const errorData = {
+      type: 'form_submission_error',
+      form: formName,
+      message: error.message || 'Form submission failed',
+      hasFormData: !!formData,
+      timestamp: new Date().toISOString()
+    };
+    
+    // Log error but catch any issues with logging itself
+    try {
+      await logErrorToFile(errorData);
+    } catch (loggingError) {
+      console.error('Failed to log form error:', loggingError);
+    }
+    
+    // Rethrow with user-friendly message
+    throw new Error(`Unable to submit ${formName}. Please try again later.`);
+  }
+};
+
+/**
+ * Safely handles navigation operations with fallbacks and error logging
+ * @param {object} navigation - Navigation object from useNavigation hook
+ * @param {string} primaryDestination - Primary screen to navigate to
+ * @param {string} fallbackDestination - Fallback screen if primary fails
+ * @returns {Promise<boolean>} - Success status of navigation
+ */
+const safeNavigation = async (navigation, primaryDestination = 'HomeTab', fallbackDestination = null) => {
+  if (!navigation) {
+    console.error('Navigation object not provided to safeNavigation');
+    return false;
+  }
+
+  // Add a breadcrumb for the navigation attempt
+  addBreadcrumb('Attempting safe navigation', { 
+    destination: primaryDestination,
+    fallback: fallbackDestination
+  });
+
+  try {
+    // First attempt - navigate to primary destination
+    await new Promise((resolve) => {
+      navigation.navigate(primaryDestination);
+      setTimeout(resolve, 100); // Small buffer to allow navigation to start
+    });
+    
+    addBreadcrumb('Primary navigation successful', { destination: primaryDestination });
+    return true;
+  } catch (primaryError) {
+    await logErrorToFile({
+      type: 'navigation_error',
+      message: `Failed to navigate to ${primaryDestination}: ${primaryError.message}`,
+      stack: primaryError.stack
+    });
+    
+    // If no fallback is provided, try going back
+    if (!fallbackDestination) {
+      try {
+        await new Promise((resolve) => {
+          navigation.goBack();
+          setTimeout(resolve, 100);
+        });
+        
+        addBreadcrumb('Fallback navigation (goBack) successful');
+        return true;
+      } catch (goBackError) {
+        await logErrorToFile({
+          type: 'navigation_error',
+          message: `Failed to goBack: ${goBackError.message}`,
+          stack: goBackError.stack
+        });
+      }
+    } else {
+      // Try the specified fallback
+      try {
+        await new Promise((resolve) => {
+          navigation.navigate(fallbackDestination);
+          setTimeout(resolve, 100);
+        });
+        
+        addBreadcrumb('Fallback navigation successful', { destination: fallbackDestination });
+        return true;
+      } catch (fallbackError) {
+        await logErrorToFile({
+          type: 'navigation_error',
+          message: `Failed to navigate to fallback ${fallbackDestination}: ${fallbackError.message}`,
+          stack: fallbackError.stack
+        });
+      }
+    }
+    
+    // Last resort - reset navigation state
+    try {
+      navigation.reset({
+        index: 0,
+        routes: [{ name: primaryDestination }],
+      });
+      
+      addBreadcrumb('Navigation reset successful', { destination: primaryDestination });
+      return true;
+    } catch (resetError) {
+      await logErrorToFile({
+        type: 'navigation_reset_error',
+        message: `Failed to reset navigation: ${resetError.message}`,
+        stack: resetError.stack
+      });
+      return false;
+    }
+  }
+};
+
 export {
   setupGlobalErrorHandler,
   initDebugSystem,
@@ -412,8 +627,11 @@ export {
   getErrorLogs,
   clearErrorLogs,
   safeExecute,
+  safeNetworkOperation,
+  safeFormSubmission,
   addBreadcrumb,
   getBreadcrumbs,
   clearBreadcrumbs,
-  flushMemoryLogs
+  flushMemoryLogs,
+  safeNavigation
 }; 

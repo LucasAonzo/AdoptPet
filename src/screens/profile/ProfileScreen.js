@@ -16,7 +16,7 @@ import { decode } from 'base64-arraybuffer';
 import defaultAvatarBase64 from '../../../assets/defaultAvatar';
 import { useAuth } from '../../context/AuthContext';
 import { useFocusEffect } from '@react-navigation/native';
-import { useUserProfile, useUpdateProfile, useDebugUserData } from '../../hooks/useUserProfile';
+import { useUserProfile, useUpdateProfile } from '../../hooks/useUserProfile';
 import { useQueryClient } from '@tanstack/react-query';
 import styles from './ProfileScreen.styles';
 import { Image as ExpoImage } from 'expo-image';
@@ -39,12 +39,6 @@ const ProfileScreen = ({ navigation }) => {
     isPending: isUpdating 
   } = useUpdateProfile();
   
-  const {
-    data: debugData,
-    refetch: debugRefetch,
-    isRefetching: isDebugRefetching
-  } = useDebugUserData();
-  
   // Local state
   const [editMode, setEditMode] = useState(false);
   const [formData, setFormData] = useState({
@@ -59,6 +53,7 @@ const ProfileScreen = ({ navigation }) => {
   const profile = userData?.profile || null;
   const myAnimals = userData?.myAnimals || [];
   const adoptedAnimals = userData?.adoptedAnimals || [];
+  const myApplications = userData?.myApplications || [];
 
   // Update form data when profile changes
   useFocusEffect(
@@ -104,71 +99,103 @@ const ProfileScreen = ({ navigation }) => {
         base64: true,
       });
       
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        setProfileImage(result.assets[0]);
+      if (!result.canceled && result.assets && result.assets[0]) {
+        setProfileImage({
+          uri: result.assets[0].uri,
+          base64: result.assets[0].base64,
+        });
       }
     } catch (error) {
       console.error('Error picking image:', error);
-      Alert.alert('Error', 'Failed to pick image. Please try again.');
+      Alert.alert('Error', 'There was an error selecting the image. Please try again.');
     }
   };
 
   const handleSaveProfile = () => {
     updateProfile({
-      formData: {
-        ...formData,
-        avatar_url: profile?.avatar_url
-      },
-      profileImage
+      formData,
+      profileImage,
+    }, {
+      onSuccess: () => setEditMode(false)
     });
-    setEditMode(false);
   };
 
   const handleLogout = async () => {
     try {
-      const success = await signOut();
-      if (!success) {
-        Alert.alert('Error', 'Failed to sign out. Please try again.');
-      }
+      await signOut();
+      // The auth provider should handle navigation after sign out
     } catch (error) {
-      console.error('Error signing out:', error);
       Alert.alert('Error', 'Failed to sign out. Please try again.');
     }
   };
 
-  const debugUserData = () => {
-    debugRefetch().then(result => {
-      if (result.data?.success) {
-        Alert.alert(
-          'Debug Info', 
-          `User ID: ${result.data.userId}\nAnimals found: ${result.data.animalsCount}`
-        );
-      } else {
-        Alert.alert('Debug Error', result.data?.message || 'Failed to fetch debug data');
-      }
-    });
-  };
-
-  const renderAnimalItem = (animal) => {
-    return (
-      <TouchableOpacity
-        key={animal.id}
-        style={styles.animalCard}
-        onPress={() => navigation.navigate('AnimalDetail', { animal })}
-      >
-        <ExpoImage
-          source={{ uri: animal.image_url }}
-          style={styles.animalImage}
-        />
-        <View style={styles.animalInfo}>
-          <Text style={styles.animalName}>{animal.name}</Text>
-          <Text style={styles.animalBreed}>
-            {animal.species} • {animal.breed}
+  // Render an animal card
+  const renderAnimalItem = (animal) => (
+    <TouchableOpacity 
+      key={animal.id}
+      style={styles.animalCard}
+      onPress={() => navigation.navigate('AnimalDetail', { animal })}
+    >
+      <ExpoImage
+        source={animal.image_url}
+        style={styles.animalImage}
+        contentFit="cover"
+      />
+      <View style={styles.animalInfo}>
+        <Text style={styles.animalName}>{animal.name}</Text>
+        <Text style={styles.animalBreed}>
+          {animal.species} - {animal.breed}
+        </Text>
+        {animal.is_adopted && (
+          <View style={styles.adoptedTag}>
+            <Text style={styles.adoptedTagText}>Adopted</Text>
+          </View>
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+  
+  // Render an application card
+  const renderApplicationItem = (application) => (
+    <TouchableOpacity 
+      key={application.id}
+      style={styles.animalCard}
+      onPress={() => {
+        // Navigate to animal detail
+        if (application.animals) {
+          navigation.navigate('AnimalDetail', { 
+            animal: application.animals,
+            refreshTimestamp: new Date().getTime() 
+          });
+        }
+      }}
+    >
+      <ExpoImage
+        source={application.animals?.image_url}
+        style={styles.animalImage}
+        contentFit="cover"
+      />
+      <View style={styles.animalInfo}>
+        <Text style={styles.animalName}>
+          {application.animals?.name || 'Unknown'}
+        </Text>
+        <Text style={styles.animalBreed}>
+          {application.animals?.species || ''} 
+          {application.animals?.breed ? ` - ${application.animals.breed}` : ''}
+        </Text>
+        <View style={[
+          styles.applicationStatus,
+          application.status === 'approved' ? styles.statusApproved :
+          application.status === 'rejected' ? styles.statusRejected :
+          styles.statusPending
+        ]}>
+          <Text style={styles.applicationStatusText}>
+            {application.status.charAt(0).toUpperCase() + application.status.slice(1)}
           </Text>
         </View>
-      </TouchableOpacity>
-    );
-  };
+      </View>
+    </TouchableOpacity>
+  );
 
   // Render profile header with avatar and edit button
   const renderProfileHeader = () => (
@@ -402,6 +429,54 @@ const ProfileScreen = ({ navigation }) => {
         </View>
       )}
       
+      {/* Applications Section */}
+      {myApplications.length > 0 && (
+        <View style={styles.animalsSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>My Adoption Applications</Text>
+            <TouchableOpacity 
+              style={styles.refreshButton}
+              onPress={refetch}
+            >
+              <Ionicons name="refresh" size={20} color="#8e74ae" />
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.animalsContainer}>
+            {myApplications.map(application => renderApplicationItem(application))}
+          </View>
+        </View>
+      )}
+      
+      {myApplications.length === 0 && profile && (
+        <View style={styles.animalsSection}>
+          <Text style={styles.sectionTitle}>My Adoption Applications</Text>
+          
+          <View style={styles.emptyStateContainer}>
+            <Ionicons name="document-text-outline" size={50} color="#E8E0FF" />
+            <Text style={styles.emptyStateText}>
+              You haven't submitted any adoption applications yet.
+              Browse available animals and apply!
+            </Text>
+            
+            <TouchableOpacity
+              style={styles.addAnimalButton}
+              onPress={() => navigation.navigate('AnimalsList')}
+            >
+              <LinearGradient
+                colors={['#0077B6', '#00B4D8']}
+                style={styles.addAnimalButtonGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+              >
+                <Ionicons name="search" size={20} color="#fff" />
+                <Text style={styles.addAnimalButtonText}>Browse Animals</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+      
       {myAnimals.length === 0 && (
         <View style={styles.animalsSection}>
           <Text style={styles.sectionTitle}>My Listed Animals</Text>
@@ -453,24 +528,7 @@ const ProfileScreen = ({ navigation }) => {
   
   // Render profile actions
   const renderProfileActions = () => (
-    <View style={styles.detailsCard}>
-      <Text style={styles.sectionTitle}>My Account</Text>
-      
-      <TouchableOpacity
-        style={styles.applicationButton}
-        onPress={() => navigation.navigate('Applications')}
-      >
-        <LinearGradient
-          colors={['#a58fd8', '#8e74ae']}
-          style={styles.applicationButtonGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-        >
-          <Ionicons name="document-text-outline" size={22} color="#fff" />
-          <Text style={styles.applicationButtonText}>View My Adoption Applications</Text>
-        </LinearGradient>
-      </TouchableOpacity>
-      
+    <View style={styles.profileActionsContainer}>
       <TouchableOpacity
         style={styles.logoutButton}
         onPress={() => {
@@ -487,24 +545,6 @@ const ProfileScreen = ({ navigation }) => {
         <Ionicons name="log-out-outline" size={22} color="#8e74ae" />
         <Text style={styles.logoutButtonText}>Sign Out</Text>
       </TouchableOpacity>
-      
-      <TouchableOpacity
-        style={styles.debugButton}
-        onPress={() => navigation.navigate('DebugLogs')}
-      >
-        <Ionicons name="analytics-outline" size={22} color="#ff6b6b" />
-        <Text style={[styles.debugButtonText, { color: '#ff6b6b' }]}>Debug Crash Logs</Text>
-      </TouchableOpacity>
-      
-      {__DEV__ && (
-        <TouchableOpacity
-          style={styles.debugButton}
-          onPress={debugUserData}
-        >
-          <Ionicons name="bug-outline" size={22} color="#8e74ae" />
-          <Text style={styles.debugButtonText}>Debug Data</Text>
-        </TouchableOpacity>
-      )}
     </View>
   );
 
