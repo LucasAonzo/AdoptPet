@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar as RNStatusBar,
+  Platform,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useNavigation } from '@react-navigation/native';
@@ -22,21 +23,28 @@ const AdoptionSuccessScreen = ({ route }) => {
 
   // Handle go home button press
   const handleGoHome = () => {
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'HomeTab' }],
-    });
+    try {
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'HomeTab' }],
+      });
+    } catch (error) {
+      console.error('Navigation error (Home):', error);
+      // Fallback navigation if primary method fails
+      navigation.navigate('HomeTab');
+    }
   };
 
   // Handle view application button press
   const handleViewApplication = () => {
-    navigation.navigate('AdoptionApplications');
-  };
-
-  // Handle view animal button press
-  const handleViewAnimal = () => {
-    navigation.goBack();
-    navigation.goBack(); // Go back twice to return to animal detail
+    try {
+      // Navigate to the Profile tab, then to the Applications screen
+      navigation.navigate('Profile', { screen: 'Applications' });
+    } catch (error) {
+      console.error('Navigation error (Applications):', error);
+      // Fallback if primary navigation method fails
+      navigation.navigate('HomeTab');
+    }
   };
 
   // Hide header on mount
@@ -175,24 +183,25 @@ const AdoptionSuccessScreen = ({ route }) => {
         style={styles.actionContainer}
       >
         <TouchableOpacity 
-          style={styles.actionButton} 
-          onPress={handleViewAnimal}
-        >
-          <Ionicons name="arrow-back" size={20} color="#8e74ae" />
-          <Text style={styles.actionButtonText}>Back to Animal</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={styles.actionButton} 
+          style={styles.secondaryButton} 
           onPress={handleViewApplication}
+          activeOpacity={0.8}
         >
-          <Ionicons name="documents" size={20} color="#8e74ae" />
-          <Text style={styles.actionButtonText}>My Applications</Text>
+          <LinearGradient
+            colors={['#f0eaf7', '#e8ddf2']}
+            style={styles.secondaryButtonGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+          >
+            <Ionicons name="documents" size={22} color="#8e74ae" />
+            <Text style={styles.secondaryButtonText}>My Applications</Text>
+          </LinearGradient>
         </TouchableOpacity>
         
         <TouchableOpacity 
           style={styles.primaryButton} 
           onPress={handleGoHome}
+          activeOpacity={0.8}
         >
           <LinearGradient
             colors={['#a58fd8', '#8e74ae']}
@@ -200,8 +209,8 @@ const AdoptionSuccessScreen = ({ route }) => {
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
           >
+            <Ionicons name="home" size={22} color="#fff" />
             <Text style={styles.primaryButtonText}>Go Home</Text>
-            <Ionicons name="home" size={20} color="#fff" />
           </LinearGradient>
         </TouchableOpacity>
       </Animatable.View>
@@ -354,47 +363,64 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: '#ffffff',
-    padding: 15,
-    paddingBottom: 30,
+    padding: 20,
+    paddingBottom: Platform.OS === 'ios' ? 30 : 25,
     borderTopWidth: 1,
     borderTopColor: '#f0f0f0',
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -3 },
     shadowOpacity: 0.1,
     shadowRadius: 5,
     elevation: 10,
   },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 10,
-    borderRadius: 8,
-    backgroundColor: '#f5f5f5',
-  },
-  actionButtonText: {
-    fontSize: 14,
-    color: '#8e74ae',
-    fontWeight: '600',
-    marginLeft: 5,
-  },
   primaryButton: {
-    borderRadius: 8,
+    borderRadius: 12,
     overflow: 'hidden',
+    flex: 1,
+    marginLeft: 12,
+    elevation: 3,
+    shadowColor: '#a58fd8',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+  },
+  secondaryButton: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    flex: 1,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
   },
   primaryButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
+    paddingVertical: 14,
     paddingHorizontal: 15,
   },
+  secondaryButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 15, 
+  },
   primaryButtonText: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#ffffff',
     fontWeight: '600',
-    marginRight: 5,
+    marginLeft: 8,
+  },
+  secondaryButtonText: {
+    fontSize: 16,
+    color: '#8e74ae',
+    fontWeight: '600',
+    marginLeft: 8,
   },
 });
 
