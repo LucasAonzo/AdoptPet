@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,9 +7,12 @@ import {
   Alert,
   ActivityIndicator,
   TextInput,
+  Platform,
+  StatusBar,
   SafeAreaView,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
@@ -19,12 +22,16 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useUserProfile, useUpdateProfile } from '../../hooks/useUserProfile';
 import { useQueryClient } from '@tanstack/react-query';
 import styles from './ProfileScreen.styles';
+import theme from '../../styles/theme';
+import componentStyles from '../../styles/componentStyles';
 import { Image as ExpoImage } from 'expo-image';
 import { SkeletonLoader } from '../../components/common';
+import * as Animatable from 'react-native-animatable';
 
 const ProfileScreen = ({ navigation }) => {
   const { user: authUser, signOut } = useAuth();
   const queryClient = useQueryClient();
+  const insets = useSafeAreaInsets();
   
   // Use React Query hooks
   const { 
@@ -48,6 +55,7 @@ const ProfileScreen = ({ navigation }) => {
     bio: '',
   });
   const [profileImage, setProfileImage] = useState(null);
+  const [activeTab, setActiveTab] = useState('info'); // 'info', 'listed', 'adopted', 'applications'
 
   // Extract data from the query result
   const profile = userData?.profile || null;
@@ -147,8 +155,8 @@ const ProfileScreen = ({ navigation }) => {
           {animal.species} - {animal.breed}
         </Text>
         {animal.is_adopted && (
-          <View style={styles.adoptedTag}>
-            <Text style={styles.adoptedTagText}>Adopted</Text>
+          <View style={[componentStyles.badge, componentStyles.statusSuccess]}>
+            <Text style={[componentStyles.badgeText, componentStyles.successText]}>Adopted</Text>
           </View>
         )}
       </View>
@@ -161,11 +169,11 @@ const ProfileScreen = ({ navigation }) => {
       key={application.id}
       style={styles.animalCard}
       onPress={() => {
-        // Navigate to animal detail
+        // Navigate to adoption progress screen
         if (application.animals) {
-          navigation.navigate('AnimalDetail', { 
+          navigation.navigate('AdoptionProgress', { 
             animal: application.animals,
-            refreshTimestamp: new Date().getTime() 
+            application: application,
           });
         }
       }}
@@ -184,12 +192,17 @@ const ProfileScreen = ({ navigation }) => {
           {application.animals?.breed ? ` - ${application.animals.breed}` : ''}
         </Text>
         <View style={[
-          styles.applicationStatus,
-          application.status === 'approved' ? styles.statusApproved :
-          application.status === 'rejected' ? styles.statusRejected :
-          styles.statusPending
+          componentStyles.badge,
+          application.status === 'approved' ? componentStyles.statusSuccess :
+          application.status === 'rejected' ? componentStyles.statusError :
+          componentStyles.statusPending
         ]}>
-          <Text style={styles.applicationStatusText}>
+          <Text style={[
+            componentStyles.badgeText,
+            application.status === 'approved' ? componentStyles.successText :
+            application.status === 'rejected' ? componentStyles.errorText :
+            componentStyles.pendingText
+          ]}>
             {application.status.charAt(0).toUpperCase() + application.status.slice(1)}
           </Text>
         </View>
@@ -197,65 +210,215 @@ const ProfileScreen = ({ navigation }) => {
     </TouchableOpacity>
   );
 
-  // Render profile header with avatar and edit button
-  const renderProfileHeader = () => (
-    <View style={styles.profileHeader}>
-      <View style={styles.profileImageContainer}>
-        {isUpdating ? (
-          <ActivityIndicator size="large" color="#8a65c9" />
-        ) : (
-          <ExpoImage
-            source={{ 
-              uri: profileImage?.uri || 
-                  profile?.avatar_url || 
-                  `data:image/png;base64,${defaultAvatarBase64}` 
-            }}
-            style={styles.profileImage}
-            contentFit="cover"
-            transition={300}
-          />
-        )}
+  // Render header with profile title
+  const renderHeader = () => (
+    <SafeAreaView style={{ backgroundColor: theme.colors.primary.main }}>
+      <View style={styles.headerContainer}>
+        <TouchableOpacity
+          style={styles.headerBackButton}
+          onPress={() => navigation.navigate('Home')}
+        >
+          <Ionicons name="arrow-back" size={24} color={theme.colors.text.light} />
+        </TouchableOpacity>
         
-        {editMode && (
-          <TouchableOpacity 
-            style={styles.editImageOverlay}
-            onPress={pickImage}
+        <Text style={styles.headerTitle}>Profile</Text>
+        
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.headerActionButton}
+            onPress={refetch}
           >
-            <Ionicons name="camera" size={24} color="#fff" />
+            <Ionicons name="refresh" size={22} color={theme.colors.text.light} />
           </TouchableOpacity>
-        )}
-      </View>
-      
-      <View style={styles.profileInfo}>
-        <Text style={styles.userName}>{profile?.name || 'User'}</Text>
-        <Text style={styles.userEmail}>{authUser?.email || ''}</Text>
-        
-        <View style={styles.statsContainer}>
-          <View style={styles.stat}>
-            <Text style={styles.statNumber}>{myAnimals.length}</Text>
-            <Text style={styles.statLabel}>Listed</Text>
-          </View>
           
-          <View style={styles.statDivider} />
-          
-          <View style={styles.stat}>
-            <Text style={styles.statNumber}>{adoptedAnimals.length}</Text>
-            <Text style={styles.statLabel}>Adopted</Text>
-          </View>
+          <TouchableOpacity
+            style={styles.headerActionButton}
+            onPress={() => navigation.navigate('Settings')}
+          >
+            <Ionicons name="settings-outline" size={22} color={theme.colors.text.light} />
+          </TouchableOpacity>
         </View>
       </View>
-    </View>
+    </SafeAreaView>
+  );
+
+  // Render profile header with avatar and edit button
+  const renderProfileHeader = () => (
+    <Animatable.View 
+      animation="fadeIn" 
+      duration={800}
+      delay={200}
+      style={styles.profileHeaderContainer}
+    >
+      <LinearGradient
+        colors={['#ffffff', '#f8f4ff']}
+        style={styles.profileHeaderGradient}
+      >
+        <View style={styles.profileAvatarContainer}>
+          <View style={styles.profileAvatarWrapper}>
+            {isUpdating ? (
+              <ActivityIndicator size="large" color={theme.colors.primary.main} />
+            ) : (
+              <ExpoImage
+                source={{ 
+                  uri: profileImage?.uri || 
+                      profile?.avatar_url || 
+                      `data:image/png;base64,${defaultAvatarBase64}` 
+                }}
+                style={styles.profileAvatar}
+                contentFit="cover"
+                transition={300}
+              />
+            )}
+            
+            {editMode && (
+              <TouchableOpacity 
+                style={styles.editAvatarButton}
+                onPress={pickImage}
+              >
+                <LinearGradient
+                  colors={theme.colors.gradients.primary}
+                  style={styles.editAvatarGradient}
+                >
+                  <Ionicons name="camera" size={22} color="#fff" />
+                </LinearGradient>
+              </TouchableOpacity>
+            )}
+          </View>
+          
+          <Text style={styles.profileName}>{profile?.name || 'User'}</Text>
+          <Text style={styles.profileEmail}>{authUser?.email || ''}</Text>
+        </View>
+      </LinearGradient>
+      
+      <View style={styles.statsContainer}>
+        <TouchableOpacity 
+          style={[
+            styles.statItem, 
+            activeTab === 'info' && styles.activeStatItem
+          ]}
+          onPress={() => setActiveTab('info')}
+        >
+          <View style={styles.statIconContainer}>
+            <Ionicons 
+              name="person" 
+              size={22} 
+              color={activeTab === 'info' ? theme.colors.primary.main : theme.colors.text.secondary} 
+            />
+          </View>
+          <Text style={[
+            styles.statLabel, 
+            activeTab === 'info' && styles.activeStatLabel
+          ]}>
+            Info
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={[
+            styles.statItem, 
+            activeTab === 'listed' && styles.activeStatItem
+          ]}
+          onPress={() => setActiveTab('listed')}
+        >
+          <View style={styles.statIconContainer}>
+            <Ionicons 
+              name="paw" 
+              size={22} 
+              color={activeTab === 'listed' ? theme.colors.primary.main : theme.colors.text.secondary} 
+            />
+            {myAnimals.length > 0 && (
+              <View style={styles.statBadge}>
+                <Text style={styles.statBadgeText}>{myAnimals.length}</Text>
+              </View>
+            )}
+          </View>
+          <Text style={[
+            styles.statLabel, 
+            activeTab === 'listed' && styles.activeStatLabel
+          ]}>
+            Listed
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={[
+            styles.statItem, 
+            activeTab === 'adopted' && styles.activeStatItem
+          ]}
+          onPress={() => setActiveTab('adopted')}
+        >
+          <View style={styles.statIconContainer}>
+            <Ionicons 
+              name="heart" 
+              size={22} 
+              color={activeTab === 'adopted' ? theme.colors.primary.main : theme.colors.text.secondary} 
+            />
+            {adoptedAnimals.length > 0 && (
+              <View style={styles.statBadge}>
+                <Text style={styles.statBadgeText}>{adoptedAnimals.length}</Text>
+              </View>
+            )}
+          </View>
+          <Text style={[
+            styles.statLabel, 
+            activeTab === 'adopted' && styles.activeStatLabel
+          ]}>
+            Adopted
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={[
+            styles.statItem, 
+            activeTab === 'applications' && styles.activeStatItem
+          ]}
+          onPress={() => setActiveTab('applications')}
+        >
+          <View style={styles.statIconContainer}>
+            <Ionicons 
+              name="document-text" 
+              size={22} 
+              color={activeTab === 'applications' ? theme.colors.primary.main : theme.colors.text.secondary} 
+            />
+            {myApplications.length > 0 && (
+              <View style={styles.statBadge}>
+                <Text style={styles.statBadgeText}>{myApplications.length}</Text>
+              </View>
+            )}
+          </View>
+          <Text style={[
+            styles.statLabel, 
+            activeTab === 'applications' && styles.activeStatLabel
+          ]}>
+            Apps
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </Animatable.View>
   );
 
   // Render profile info when not in edit mode
   const renderProfileInfo = () => (
-    <View style={styles.detailsCard}>
-      <Text style={styles.sectionTitle}>Personal Information</Text>
+    <Animatable.View 
+      animation="fadeIn" 
+      duration={500}
+      style={styles.detailsCard}
+    >
+      <View style={styles.sectionHeaderContainer}>
+        <Text style={styles.sectionTitle}>Personal Information</Text>
+        <TouchableOpacity
+          style={styles.editActionButton}
+          onPress={() => setEditMode(true)}
+        >
+          <Ionicons name="create-outline" size={20} color={theme.colors.primary.main} />
+        </TouchableOpacity>
+      </View>
       
       <View style={styles.detailsContainer}>
         <View style={styles.detailRow}>
           <View style={styles.detailIconLabelContainer}>
-            <Ionicons name="person-outline" size={20} color="#8e74ae" />
+            <Ionicons name="person-outline" size={20} color={theme.colors.primary.main} />
             <Text style={styles.detailLabel}>Name</Text>
           </View>
           <Text style={styles.detailValue}>{profile?.name || 'Not set'}</Text>
@@ -263,7 +426,7 @@ const ProfileScreen = ({ navigation }) => {
         
         <View style={styles.detailRow}>
           <View style={styles.detailIconLabelContainer}>
-            <Ionicons name="call-outline" size={20} color="#8e74ae" />
+            <Ionicons name="call-outline" size={20} color={theme.colors.primary.main} />
             <Text style={styles.detailLabel}>Phone</Text>
           </View>
           <Text style={styles.detailValue}>{profile?.phone || 'Not set'}</Text>
@@ -271,7 +434,7 @@ const ProfileScreen = ({ navigation }) => {
         
         <View style={styles.detailRow}>
           <View style={styles.detailIconLabelContainer}>
-            <Ionicons name="location-outline" size={20} color="#8e74ae" />
+            <Ionicons name="location-outline" size={20} color={theme.colors.primary.main} />
             <Text style={styles.detailLabel}>Address</Text>
           </View>
           <Text style={styles.detailValue}>{profile?.address || 'Not set'}</Text>
@@ -279,31 +442,16 @@ const ProfileScreen = ({ navigation }) => {
         
         <View style={styles.detailRow}>
           <View style={styles.detailIconLabelContainer}>
-            <Ionicons name="information-circle-outline" size={20} color="#8e74ae" />
+            <Ionicons name="information-circle-outline" size={20} color={theme.colors.primary.main} />
             <Text style={styles.detailLabel}>Bio</Text>
           </View>
           <Text style={styles.detailValue}>{profile?.bio || 'No bio provided'}</Text>
         </View>
       </View>
-      
-      <TouchableOpacity
-        style={styles.editButton}
-        onPress={() => setEditMode(true)}
-      >
-        <LinearGradient
-          colors={['#a58fd8', '#8e74ae']}
-          style={styles.editButtonGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-        >
-          <Ionicons name="create-outline" size={20} color="#fff" />
-          <Text style={styles.editButtonText}>Edit Profile</Text>
-        </LinearGradient>
-      </TouchableOpacity>
-    </View>
+    </Animatable.View>
   );
 
-  // Render edit form when in edit mode
+  // Render edit form
   const renderEditForm = () => (
     <View style={styles.detailsCard}>
       <Text style={styles.sectionTitle}>Edit Profile</Text>
@@ -393,144 +541,104 @@ const ProfileScreen = ({ navigation }) => {
     </View>
   );
 
-  // Render animal sections (my animals, adopted animals)
-  const renderAnimalSections = () => (
-    <>
-      {myAnimals.length > 0 && (
-        <View style={styles.animalsSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>My Listed Animals</Text>
-            <TouchableOpacity 
-              style={styles.refreshButton}
-              onPress={refetch}
-            >
-              <Ionicons name="refresh" size={20} color="#8e74ae" />
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.animalsContainer}>
-            {myAnimals.map(animal => renderAnimalItem(animal))}
-          </View>
-          
-          <TouchableOpacity
-            style={styles.addAnimalButton}
-            onPress={() => navigation.navigate('AddAnimal')}
+  // Render my animals section
+  const renderMyAnimals = () => (
+    <Animatable.View 
+      animation="fadeIn" 
+      duration={500}
+      style={styles.animalsSection}
+    >
+      <View style={styles.sectionHeaderContainer}>
+        <Text style={styles.sectionTitle}>My Listed Animals</Text>
+        
+        <TouchableOpacity
+          style={styles.addAnimalButton}
+          onPress={() => navigation.navigate('AddAnimal')}
+        >
+          <LinearGradient
+            colors={theme.colors.gradients.primary}
+            style={styles.addAnimalButtonGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
           >
-            <LinearGradient
-              colors={['#a58fd8', '#8e74ae']}
-              style={styles.addAnimalButtonGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-            >
-              <Ionicons name="add" size={20} color="#fff" />
-              <Text style={styles.addAnimalButtonText}>Add New Animal</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
-      )}
+            <Ionicons name="add" size={18} color="#fff" />
+            <Text style={styles.addAnimalButtonText}>Add New</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      </View>
       
-      {/* Applications Section */}
-      {myApplications.length > 0 && (
-        <View style={styles.animalsSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>My Adoption Applications</Text>
-            <TouchableOpacity 
-              style={styles.refreshButton}
-              onPress={refetch}
-            >
-              <Ionicons name="refresh" size={20} color="#8e74ae" />
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.animalsContainer}>
-            {myApplications.map(application => renderApplicationItem(application))}
-          </View>
+      {myAnimals.length === 0 ? (
+        <View style={styles.emptyStateContainer}>
+          <Ionicons name="paw-outline" size={48} color={theme.colors.neutral.grey400} />
+          <Text style={styles.emptyStateText}>
+            You haven't listed any animals for adoption yet.
+          </Text>
+        </View>
+      ) : (
+        <View style={styles.animalsGrid}>
+          {myAnimals.map(animal => renderAnimalItem(animal))}
         </View>
       )}
+    </Animatable.View>
+  );
+
+  // Render adopted animals section
+  const renderAdoptedAnimals = () => (
+    <Animatable.View 
+      animation="fadeIn" 
+      duration={500}
+      style={styles.animalsSection}
+    >
+      <View style={styles.sectionHeaderContainer}>
+        <Text style={styles.sectionTitle}>Animals I've Adopted</Text>
+      </View>
       
-      {myApplications.length === 0 && profile && (
-        <View style={styles.animalsSection}>
-          <Text style={styles.sectionTitle}>My Adoption Applications</Text>
-          
-          <View style={styles.emptyStateContainer}>
-            <Ionicons name="document-text-outline" size={50} color="#E8E0FF" />
-            <Text style={styles.emptyStateText}>
-              You haven't submitted any adoption applications yet.
-              Browse available animals and apply!
-            </Text>
-            
-            <TouchableOpacity
-              style={styles.addAnimalButton}
-              onPress={() => navigation.navigate('AnimalsList')}
-            >
-              <LinearGradient
-                colors={['#0077B6', '#00B4D8']}
-                style={styles.addAnimalButtonGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-              >
-                <Ionicons name="search" size={20} color="#fff" />
-                <Text style={styles.addAnimalButtonText}>Browse Animals</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
+      {adoptedAnimals.length === 0 ? (
+        <View style={styles.emptyStateContainer}>
+          <Ionicons name="heart-outline" size={48} color={theme.colors.neutral.grey400} />
+          <Text style={styles.emptyStateText}>
+            You haven't adopted any animals yet.
+          </Text>
+        </View>
+      ) : (
+        <View style={styles.animalsGrid}>
+          {adoptedAnimals.map(animal => renderAnimalItem(animal))}
         </View>
       )}
+    </Animatable.View>
+  );
+
+  // Render applications section
+  const renderApplications = () => (
+    <Animatable.View 
+      animation="fadeIn" 
+      duration={500}
+      style={styles.animalsSection}
+    >
+      <View style={styles.sectionHeaderContainer}>
+        <Text style={styles.sectionTitle}>My Applications</Text>
+      </View>
       
-      {myAnimals.length === 0 && (
-        <View style={styles.animalsSection}>
-          <Text style={styles.sectionTitle}>My Listed Animals</Text>
-          
-          <View style={styles.emptyStateContainer}>
-            <Ionicons name="paw" size={50} color="#E8E0FF" />
-            <Text style={styles.emptyStateText}>
-              You don't have any listed animals yet. 
-              Add a new animal for adoption!
-            </Text>
-            
-            <TouchableOpacity
-              style={styles.addAnimalButton}
-              onPress={() => navigation.navigate('AddAnimal')}
-            >
-              <LinearGradient
-                colors={['#a58fd8', '#8e74ae']}
-                style={styles.addAnimalButtonGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-              >
-                <Ionicons name="add" size={20} color="#fff" />
-                <Text style={styles.addAnimalButtonText}>Add New Animal</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
+      {myApplications.length === 0 ? (
+        <View style={styles.emptyStateContainer}>
+          <Ionicons name="document-text-outline" size={48} color={theme.colors.neutral.grey400} />
+          <Text style={styles.emptyStateText}>
+            You haven't submitted any adoption applications yet.
+          </Text>
+        </View>
+      ) : (
+        <View style={styles.animalsGrid}>
+          {myApplications.map(application => renderApplicationItem(application))}
         </View>
       )}
-      
-      {adoptedAnimals.length > 0 && (
-        <View style={styles.animalsSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Adopted Animals</Text>
-            <TouchableOpacity 
-              style={styles.refreshButton}
-              onPress={refetch}
-            >
-              <Ionicons name="refresh" size={20} color="#8e74ae" />
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.animalsContainer}>
-            {adoptedAnimals.map(animal => renderAnimalItem(animal))}
-          </View>
-        </View>
-      )}
-    </>
+    </Animatable.View>
   );
   
   // Render profile actions
   const renderProfileActions = () => (
     <View style={styles.profileActionsContainer}>
       <TouchableOpacity
-        style={styles.logoutButton}
+        style={styles.signOutButton}
         onPress={() => {
           Alert.alert(
             'Sign Out',
@@ -542,41 +650,71 @@ const ProfileScreen = ({ navigation }) => {
           );
         }}
       >
-        <Ionicons name="log-out-outline" size={22} color="#8e74ae" />
-        <Text style={styles.logoutButtonText}>Sign Out</Text>
+        <LinearGradient
+          colors={['#ff6b6b', '#ee5253']}
+          style={styles.signOutButtonGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+        >
+          <Ionicons name="log-out-outline" size={22} color="#fff" />
+          <Text style={styles.signOutButtonText}>Sign Out</Text>
+        </LinearGradient>
       </TouchableOpacity>
     </View>
   );
+
+  // Determine which content to render based on active tab
+  const renderTabContent = () => {
+    if (editMode) return renderEditForm();
+    
+    switch (activeTab) {
+      case 'info':
+        return (
+          <>
+            {renderProfileInfo()}
+            {renderProfileActions()}
+          </>
+        );
+      case 'listed':
+        return renderMyAnimals();
+      case 'adopted':
+        return renderAdoptedAnimals();
+      case 'applications':
+        return renderApplications();
+      default:
+        return renderProfileInfo();
+    }
+  };
 
   // Create a section for the main content rendering
   const renderMainContent = () => (
     <ScrollView
       style={styles.scrollView}
-      contentContainerStyle={styles.scrollContainer}
+      contentContainerStyle={[
+        styles.scrollContainer,
+        { paddingBottom: insets.bottom + theme.spacing.xl }
+      ]}
       showsVerticalScrollIndicator={false}
     >
       {renderProfileHeader()}
-      {editMode ? renderEditForm() : renderProfileInfo()}
-      {!editMode && renderProfileActions()}
-      {!editMode && renderAnimalSections()}
+      {renderTabContent()}
     </ScrollView>
   );
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={[componentStyles.loadingContainer, { paddingTop: insets.top }]}>
         <SkeletonLoader variant="profile" />
       </View>
     );
   }
 
   return (
-    <LinearGradient
-      colors={['#ffffff', '#f8f4ff']}
-      style={styles.gradientContainer}
-    >
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" />
+      {renderHeader()}
       {renderMainContent()}
-    </LinearGradient>
+    </View>
   );
 };
 

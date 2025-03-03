@@ -3,6 +3,7 @@ import { Alert } from 'react-native';
 import { decode } from 'base64-arraybuffer';
 import supabase from '../config/supabase';
 import { useAuth } from '../context/AuthContext';
+import StorageService from '../services/storageService';
 
 /**
  * Hook to create a new animal
@@ -20,23 +21,15 @@ export const useCreateAnimal = (navigation) => {
         let imageUrl = null;
         
         if (imageData?.base64) {
+          // Use StorageService to upload the image
           const fileName = `animal_${Date.now()}.jpg`;
-          const contentType = 'image/jpeg';
-          const base64FileData = imageData.base64;
+          const { success, publicUrl, error: uploadError } = await StorageService.uploadBase64Image(
+            imageData.base64,
+            'animals', // Use the 'animals' bucket which is known to exist
+            fileName
+          );
           
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('animal_images')
-            .upload(fileName, decode(base64FileData), {
-              contentType,
-              upsert: true,
-            });
-          
-          if (uploadError) throw uploadError;
-          
-          // Get public URL
-          const { data: { publicUrl } } = supabase.storage
-            .from('animal_images')
-            .getPublicUrl(fileName);
+          if (!success || uploadError) throw uploadError || new Error('Failed to upload image');
           
           imageUrl = publicUrl;
         }
@@ -97,23 +90,15 @@ export const useUpdateAnimal = (navigation) => {
         let imageUrl = animalData.image_url;
         
         if (imageData?.base64) {
+          // Use StorageService to upload the image
           const fileName = `animal_${animalId}_${Date.now()}.jpg`;
-          const contentType = 'image/jpeg';
-          const base64FileData = imageData.base64;
+          const { success, publicUrl, error: uploadError } = await StorageService.uploadBase64Image(
+            imageData.base64,
+            'animals', // Use the 'animals' bucket which is known to exist
+            fileName
+          );
           
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('animal_images')
-            .upload(fileName, decode(base64FileData), {
-              contentType,
-              upsert: true,
-            });
-          
-          if (uploadError) throw uploadError;
-          
-          // Get public URL
-          const { data: { publicUrl } } = supabase.storage
-            .from('animal_images')
-            .getPublicUrl(fileName);
+          if (!success || uploadError) throw uploadError || new Error('Failed to upload image');
           
           imageUrl = publicUrl;
         }

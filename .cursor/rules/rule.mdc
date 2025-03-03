@@ -17,6 +17,26 @@ If you create any new file(s), it is mandatory to run the following command to u
 ```powershell
 & "C:\Users\lucas\.cursor-tutor-3\AdoptMe\.scripts\update_structure.ps1"
 
+---------------------------------
+
+Strict Command Execution Rule for Windows
+Instructions for Command Execution:
+Since I am using a Windows system, it is mandatory to follow these strict rules for executing console commands:
+
+1-Always start by navigating to the AdoptMe folder: Before executing any command, ensure that the current directory is AdoptMe. Use the command cd AdoptMe as the first step in each command sequence, unless it has already been specified that I am in that directory.
+
+2-Execute each command individually and sequentially: Do not use chained commands with && under any circumstances. Each command must be listed and executed separately, one after the other.
+
+3-Mandatory format: Present the commands in a numbered list, where each number represents an individual step that I must execute manually in the console.
+
+Correct Example:
+1. cd AdoptMe
+2. .scripts\update_structure.ps1
+
+Incorrect Example (Prohibited):
+cd AdoptMe && .scripts\update_structure.ps1
+
+---------------------------------
 
 Code Style and Structure:
 - Write concise, type-safe TypeScript code.

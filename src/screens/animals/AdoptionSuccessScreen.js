@@ -24,14 +24,20 @@ const AdoptionSuccessScreen = ({ route }) => {
   // Handle go home button press
   const handleGoHome = () => {
     try {
+      // First try to navigate to the parent 'Main' navigator, then to the 'Home' tab
       navigation.reset({
         index: 0,
-        routes: [{ name: 'HomeTab' }],
+        routes: [{ name: 'Main' }],
       });
+      
+      // After a small delay, ensure we're in the Home tab
+      setTimeout(() => {
+        navigation.navigate('Home');
+      }, 100);
     } catch (error) {
       console.error('Navigation error (Home):', error);
       // Fallback navigation if primary method fails
-      navigation.navigate('HomeTab');
+      navigation.navigate('Home');
     }
   };
 
@@ -43,7 +49,7 @@ const AdoptionSuccessScreen = ({ route }) => {
     } catch (error) {
       console.error('Navigation error (Applications):', error);
       // Fallback if primary navigation method fails
-      navigation.navigate('HomeTab');
+      navigation.navigate('Home');
     }
   };
 
