@@ -11,6 +11,7 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  InteractionManager,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useNavigation } from '@react-navigation/native';
@@ -20,6 +21,12 @@ import { useAuth } from '../../context/AuthContext';
 import { useSubmitAdoptionApplication } from '../../hooks/useAdoptionMutations';
 import { OptimizedImage, SkeletonLoader } from '../../components/common';
 import * as Animatable from 'react-native-animatable';
+import { 
+  addBreadcrumb, 
+  safeExecute,
+  logErrorToFile,
+  flushMemoryLogs
+} from '../../utils/debugUtils';
 
 const AdoptionApplicationScreen = ({ route }) => {
   const { animal } = route.params;
@@ -149,57 +156,136 @@ const AdoptionApplicationScreen = ({ route }) => {
   
   // Handle form submission
   const handleSubmit = async () => {
-    if (validateStep(currentStep)) {
+    try {
+      addBreadcrumb('Submit button pressed', { animal: animal.id });
+      
+      // Validate form first
+      if (!validateStep(currentStep)) {
+        addBreadcrumb('Form validation failed', { step: currentStep, errors });
+        return;
+      }
+      
+      addBreadcrumb('Form validation passed', { step: currentStep });
+      
+      // No need to set isSubmitting, it will be handled by the React Query hook
+      
+      // Prepare application data
+      const applicationData = {
+        animalId: animal.id,
+        form: form,
+      };
+      
+      addBreadcrumb('Application data prepared', { animalId: animal.id });
+      await flushMemoryLogs();
+      
+      // 1. FIRST: Submit the application data
       try {
-        const applicationData = {
-          animalId: animal.id,
-          form,
-          status: 'pending',
-          created_at: new Date().toISOString(),
-        };
-
-        // Show a simple success message first
-        Alert.alert(
-          'Application Submitted',
-          `Thank you for applying to adopt ${animal.name}. Our team will review your application shortly.`,
-          [{ text: 'OK' }]
-        );
-
-        // Navigate to the Home tab immediately
-        try {
-          navigation.navigate('Home');
-        } catch (navError) {
-          console.error('Navigation error:', navError);
-          // Try alternative navigation if the first attempt fails
-          try {
-            navigation.reset({
-              index: 0,
-              routes: [{ name: 'Home' }],
-            });
-          } catch (resetError) {
-            console.error('Navigation reset error:', resetError);
-          }
-        }
+        addBreadcrumb('Beginning submission to database');
         
-        // Submit the application in the background after navigation
-        setTimeout(() => {
-          try {
+        // Use safeExecute to prevent crashes during submission
+        await safeExecute(async () => {
+          return new Promise((resolve, reject) => {
             submitApplication(applicationData, {
-              onSuccess: () => {
-                console.log('Application submitted successfully');
+              onSuccess: (data) => {
+                addBreadcrumb('Application submitted successfully', { id: data?.id });
+                console.log('Application submitted successfully', data);
+                resolve(data);
               },
               onError: (error) => {
+                addBreadcrumb('Error submitting application', { error: error?.message });
                 console.error('Error submitting application:', error);
+                reject(error);
               }
             });
-          } catch (submitError) {
-            console.error('Submission error:', submitError);
-          }
-        }, 500);
-      } catch (error) {
-        console.error('General error in handleSubmit:', error);
-        Alert.alert('Error', 'An unexpected error occurred. Please try again later.');
+          });
+        }, 'application_submission');
+        
+        addBreadcrumb('Database submission completed successfully');
+        await flushMemoryLogs();
+        
+        // 2. SECOND: Show success alert
+        addBreadcrumb('Showing success alert');
+        
+        // Wait for alert to be acknowledged
+        await new Promise(resolve => {
+          Alert.alert(
+            'Application Submitted',
+            `Thank you for applying to adopt ${animal.name}. Our team will review your application shortly.`,
+            [{ 
+              text: 'OK',
+              onPress: () => {
+                addBreadcrumb('Alert OK button pressed');
+                resolve();
+              } 
+            }],
+            { cancelable: false } // Prevent dismissing by tapping outside
+          );
+        });
+        
+        addBreadcrumb('Alert acknowledged, proceeding to navigation');
+        await flushMemoryLogs();
+        
+        // 3. THIRD: Navigate to home screen
+        addBreadcrumb('Attempting navigation');
+        
+        // Wait for any pending interactions to complete
+        await new Promise(resolve => {
+          InteractionManager.runAfterInteractions(() => {
+            resolve();
+          });
+        });
+        
+        navigation.navigate('Home');
+        addBreadcrumb('Navigation completed');
+        
+      } catch (submitError) {
+        // Handle submission errors
+        addBreadcrumb('Error in submission process', { error: submitError?.message });
+        console.error('Error in submission process:', submitError);
+        
+        await logErrorToFile({
+          type: 'submission_error',
+          message: submitError?.message || 'Unknown submission error',
+          stack: submitError?.stack,
+          timestamp: new Date().toISOString()
+        });
+        
+        // Show error alert and stay on current screen
+        Alert.alert(
+          'Submission Error',
+          'There was a problem submitting your application. Please try again later.',
+          [{ text: 'OK' }]
+        );
+      } finally {
+        // No need to manually set isSubmitting since React Query handles it
+        await flushMemoryLogs();
       }
+      
+    } catch (error) {
+      // Handle general errors in the submission flow
+      addBreadcrumb('General error in handleSubmit', { error: error?.message });
+      console.error('General error in handleSubmit:', error);
+      
+      await logErrorToFile({
+        type: 'general_submission_error',
+        message: error?.message || 'Unknown general error',
+        stack: error?.stack,
+        timestamp: new Date().toISOString()
+      });
+      
+      // No need to manually set isSubmitting since React Query handles it
+      
+      // Show general error alert
+      try {
+        Alert.alert('Error', 'An unexpected error occurred. Please try again later.');
+      } catch (alertError) {
+        console.error('Failed to show error alert:', alertError);
+      }
+      
+      // Force log flush on error
+      await flushMemoryLogs().catch(err => {
+        console.error('Failed to flush logs after error:', err);
+      });
     }
   };
   
@@ -543,79 +629,41 @@ const AdoptionApplicationScreen = ({ route }) => {
       duration={300}
       style={styles.formSection}
     >
-      <Text style={styles.sectionTitle}>Agreements</Text>
+      <Text style={styles.sectionTitle}>Agreement</Text>
       <Text style={styles.sectionDescription}>
         Please review and agree to the following terms to complete your application.
       </Text>
       
-      <View style={styles.agreementContainer}>
-        <ScrollView style={styles.agreementScroll}>
-          <Text style={styles.agreementText}>
-            By submitting this application, I confirm that all information provided is accurate and truthful. I understand that:
-            
-            1. Submitting an application does not guarantee approval for adoption.
-            
-            2. The shelter reserves the right to deny any application without specifying a reason.
-            
-            3. I will be responsible for all costs associated with the pet's care including food, supplies, and veterinary care.
-            
-            4. I will provide a safe and loving environment for the pet.
-            
-            5. I agree to follow-up visits from the shelter to ensure the pet's well-being.
-            
-            6. If at any time I cannot keep the pet, I will contact the shelter first before rehoming.
-            
-            7. I am at least 18 years of age.
-            
-            8. The adoption fee is non-refundable once the adoption is finalized.
-            
-            9. All members of my household are aware of and have agreed to this adoption.
-            
-            10. I agree to comply with all local laws and regulations regarding pet ownership.
+      <View style={styles.formGroup}>
+        <View style={styles.checkboxContainer}>
+          <Switch
+            value={form.agreeToTerms}
+            onValueChange={(value) => handleChange('agreeToTerms', value)}
+            trackColor={{ false: '#d1d1d1', true: '#4CAF50' }}
+            thumbColor={form.agreeToTerms ? '#fff' : '#f4f3f4'}
+            ios_backgroundColor="#d1d1d1"
+          />
+          <Text style={styles.checkboxLabel}>
+            I agree to the terms and conditions of the adoption process.
           </Text>
-        </ScrollView>
+        </View>
+        {errors.agreeToTerms && <Text style={styles.errorText}>{errors.agreeToTerms}</Text>}
       </View>
       
       <View style={styles.formGroup}>
-        <View style={styles.checkboxRow}>
-          <TouchableOpacity
-            style={styles.checkbox}
-            onPress={() => handleChange('agreeToTerms', !form.agreeToTerms)}
-          >
-            {form.agreeToTerms ? (
-              <Ionicons name="checkmark-circle" size={24} color="#8e74ae" />
-            ) : (
-              <Ionicons name="ellipse-outline" size={24} color="#cccccc" />
-            )}
-          </TouchableOpacity>
+        <View style={styles.checkboxContainer}>
+          <Switch
+            value={form.agreeToHomeVisit}
+            onValueChange={(value) => handleChange('agreeToHomeVisit', value)}
+            trackColor={{ false: '#d1d1d1', true: '#4CAF50' }}
+            thumbColor={form.agreeToHomeVisit ? '#fff' : '#f4f3f4'}
+            ios_backgroundColor="#d1d1d1"
+          />
           <Text style={styles.checkboxLabel}>
-            I agree to all terms and conditions stated above
+            I agree to a home visit as part of the adoption process.
           </Text>
         </View>
-        {errors.agreeToTerms && (
-          <Text style={styles.errorText}>{errors.agreeToTerms}</Text>
-        )}
-      </View>
-      
-      <View style={styles.formGroup}>
-        <View style={styles.checkboxRow}>
-          <TouchableOpacity
-            style={styles.checkbox}
-            onPress={() => handleChange('agreeToHomeVisit', !form.agreeToHomeVisit)}
-          >
-            {form.agreeToHomeVisit ? (
-              <Ionicons name="checkmark-circle" size={24} color="#8e74ae" />
-            ) : (
-              <Ionicons name="ellipse-outline" size={24} color="#cccccc" />
-            )}
-          </TouchableOpacity>
-          <Text style={styles.checkboxLabel}>
-            I agree to a home visit if required as part of the adoption process
-          </Text>
-        </View>
-        {errors.agreeToHomeVisit && (
-          <Text style={styles.errorText}>{errors.agreeToHomeVisit}</Text>
-        )}
+        {errors.agreeToHomeVisit && <Text style={styles.errorText}>{errors.agreeToHomeVisit}</Text>}
       </View>
     </Animatable.View>
   );
@@ -866,34 +914,62 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
   },
-  checkboxRow: {
+  checkboxContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  checkbox: {
-    marginRight: 10,
+    marginBottom: 10,
   },
   checkboxLabel: {
+    marginLeft: 10,
     flex: 1,
-    fontSize: 16,
-    color: '#333',
-  },
-  agreementContainer: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    marginBottom: 20,
-    backgroundColor: '#f9f9f9',
-    height: 180,
-    padding: 10,
-  },
-  agreementScroll: {
-    flex: 1,
-  },
-  agreementText: {
     fontSize: 14,
-    color: '#333',
-    lineHeight: 22,
+  },
+  submitButton: {
+    backgroundColor: '#8e74ae',
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 20,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  disabledButton: {
+    opacity: 0.7,
+    backgroundColor: '#666',
+  },
+  submitButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  submitButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '500',
+    marginRight: 8,
+  },
+  successText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginTop: 20,
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -932,10 +1008,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginRight: 8,
   },
-  submitButton: {
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
   submitButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -948,12 +1020,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     marginRight: 8,
-  },
-  successText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginTop: 20,
   },
 });
 

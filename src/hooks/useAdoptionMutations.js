@@ -17,10 +17,16 @@ export const useSubmitAdoptionApplication = () => {
         throw new Error('User must be logged in to submit an application');
       }
 
-      // Prepare application data
+      // Ensure required values are present
+      if (!applicationData.animalId) {
+        console.error('Missing animalId in applicationData:', JSON.stringify(applicationData));
+        throw new Error('Animal ID is required for adoption application');
+      }
+
+      // Prepare application data with explicit mapping
       const application = {
         user_id: user.id,
-        animal_id: applicationData.animalId,
+        animal_id: applicationData.animalId, // Explicitly map animalId to animal_id field
         status: 'pending',
         submitted_at: new Date().toISOString(),
         application_data: applicationData.form || applicationData.application_data,

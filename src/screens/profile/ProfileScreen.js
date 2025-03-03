@@ -488,6 +488,14 @@ const ProfileScreen = ({ navigation }) => {
         <Text style={styles.logoutButtonText}>Sign Out</Text>
       </TouchableOpacity>
       
+      <TouchableOpacity
+        style={styles.debugButton}
+        onPress={() => navigation.navigate('DebugLogs')}
+      >
+        <Ionicons name="analytics-outline" size={22} color="#ff6b6b" />
+        <Text style={[styles.debugButtonText, { color: '#ff6b6b' }]}>Debug Crash Logs</Text>
+      </TouchableOpacity>
+      
       {__DEV__ && (
         <TouchableOpacity
           style={styles.debugButton}

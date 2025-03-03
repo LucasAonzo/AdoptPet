@@ -13,6 +13,7 @@ import AdoptionApplicationScreen from '../screens/animals/AdoptionApplicationScr
 import AdoptionSuccessScreen from '../screens/animals/AdoptionSuccessScreen';
 import ApplicationsScreen from '../screens/profile/ApplicationsScreen';
 import ApplicationDetailsScreen from '../screens/profile/ApplicationDetailsScreen';
+import SimpleDebugScreen from '../screens/profile/SimpleDebugScreen';
 
 const Tab = createBottomTabNavigator();
 const HomeStack = createStackNavigator();
@@ -241,6 +242,14 @@ const ProfileStackScreen = ({ navigation }) => {
         options={{
           title: 'Application Details',
           headerShown: false,
+        }}
+      />
+      
+      <ProfileStack.Screen
+        name="DebugLogs"
+        component={SimpleDebugScreen}
+        options={{
+          title: 'Debug Logs',
         }}
       />
       
