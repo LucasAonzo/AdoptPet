@@ -172,24 +172,10 @@ const AdoptionApplicationScreen = ({ route, navigation }) => {
         );
       } else {
         console.log('Application submitted successfully:', data);
-        // Show success alert
-        Alert.alert(
-          'Application Submitted',
-          `Thank you for applying to adopt ${animal.name}! We will review your application and get back to you soon.`,
-          [
-            { 
-              text: 'OK', 
-              onPress: () => {
-                // Return to previous screen with a refresh parameter
-                navigation.navigate('AnimalDetail', {
-                  animal: animal,
-                  applicationSubmitted: true,
-                  refreshTimestamp: new Date().getTime()
-                });
-              }
-            }
-          ]
-        );
+        // Navigate to success screen
+        navigation.navigate('AdoptionSuccess', {
+          animal: animal
+        });
       }
     } catch (error) {
       console.error('Exception during submission:', error);

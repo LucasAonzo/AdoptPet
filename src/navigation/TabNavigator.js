@@ -85,6 +85,17 @@ const HomeStackScreen = () => {
           headerShown: false
         }}
       />
+      
+      {/* Add AdoptionSuccessScreen */}
+      <HomeStack.Screen
+        name="AdoptionSuccess"
+        component={require('../screens/animals/AdoptionSuccessScreen').default}
+        options={{
+          title: 'Application Submitted',
+          headerShown: false,
+          gestureEnabled: false
+        }}
+      />
     </HomeStack.Navigator>
   );
 };
