@@ -25,7 +25,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/1</span>
+                <span class='fraction'>0/2</span>
             </div>
         
             
@@ -46,7 +46,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/1</span>
+                <span class='fraction'>0/2</span>
             </div>
         
             
@@ -501,13 +501,10 @@
 <a name='L436'></a><a href='#L436'>436</a>
 <a name='L437'></a><a href='#L437'>437</a>
 <a name='L438'></a><a href='#L438'>438</a>
-<a name='L439'></a><a href='#L439'>439</a>
-<a name='L440'></a><a href='#L440'>440</a>
-<a name='L441'></a><a href='#L441'>441</a>
-<a name='L442'></a><a href='#L442'>442</a>
-<a name='L443'></a><a href='#L443'>443</a>
-<a name='L444'></a><a href='#L444'>444</a>
-<a name='L445'></a><a href='#L445'>445</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L439'></a><a href='#L439'>439</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -942,456 +939,441 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { StyleSheet } from 'react-native';
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { StyleSheet, Dimensions, Platform } from 'react-native';
+import theme from '../../styles/theme';
+&nbsp;
+const { width } = <span class="cstat-no" title="statement not covered" >Dimensions.get('window');</span>
 &nbsp;
 const styles = <span class="cstat-no" title="statement not covered" >StyleSheet.create({</span>
-  gradientContainer: {
+  container: {
     flex: 1,
+    backgroundColor: theme.colors.background.default,
   },
-  loadingContainer: {
+  scrollView: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f8f4ff',
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: '#8e74ae',
   },
   scrollContainer: {
-    padding: 16,
-    paddingBottom: 40,
+    paddingHorizontal: theme.spacing.md,
+    paddingBottom: theme.spacing.xl, 
   },
-  profileHeader: {
+  
+  // Header
+  headerContainer: {
+    width: '100%',
+    backgroundColor: theme.colors.primary.main,
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 10,
-    marginBottom: 20,
+    justifyContent: 'space-between',
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
+    height: 56,
   },
-  profileImageContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 3,
-    borderColor: '#8e74ae',
+  headerBackButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: theme.colors.text.light,
+    textAlign: 'center',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerActionButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: theme.spacing.sm,
+  },
+  
+  // Profile Header
+  profileHeaderContainer: {
+    marginHorizontal: theme.spacing.md,
+    marginTop: theme.spacing.md,
+    borderRadius: theme.border.radius.lg,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+    backgroundColor: '#fff',
     overflow: 'hidden',
-    backgroundColor: '#E8E0FF',
-    shadowColor: '#8e74ae',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 8,
   },
-  profileImage: {
+  profileHeaderGradient: {
+    paddingVertical: theme.spacing.md,
+    alignItems: 'center',
+  },
+  profileAvatarContainer: {
+    alignItems: 'center',
+    paddingVertical: theme.spacing.md,
+  },
+  profileAvatarWrapper: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 6,
+    backgroundColor: theme.colors.background.paper,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: theme.spacing.md,
+    borderWidth: 3,
+    borderColor: '#fff',
+  },
+  profileAvatar: {
     width: '100%',
     height: '100%',
+    borderRadius: 60,
   },
-  editImageOverlay: {
+  editAvatarButton: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(142, 116, 174, 0.5)',
-    justifyContent: 'center',
+    right: 0,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    overflow: 'hidden',
+  },
+  editAvatarGradient: {
+    width: '100%',
+    height: '100%',
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  profileInfo: {
-    flex: 1,
-    marginLeft: 15,
+  profileName: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: theme.colors.text.primary,
+    marginBottom: theme.spacing.xs,
   },
-  userName: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#8e74ae',
-    marginBottom: 4,
-  },
-  userEmail: {
+  profileEmail: {
     fontSize: 14,
-    color: '#666',
-    marginBottom: 10,
+    color: theme.colors.text.secondary,
   },
+  
+  // Stats/Tabs
   statsContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 5,
+    justifyContent: 'space-around',
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.neutral.grey100,
+    backgroundColor: theme.colors.background.paper,
   },
-  stat: {
+  statItem: {
+    flex: 1,
     alignItems: 'center',
-    paddingHorizontal: 12,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.border.radius.md,
+    maxWidth: width / 4,
   },
-  statNumber: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#8e74ae',
+  activeStatItem: {
+    backgroundColor: theme.colors.primary.lighter,
+  },
+  statIconContainer: {
+    position: 'relative',
+    width: 30,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  statBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -8,
+    backgroundColor: theme.colors.secondary.main,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#fff',
   },
   statLabel: {
     fontSize: 12,
-    color: '#666',
+    color: theme.colors.text.secondary,
+    fontWeight: '500',
+    textAlign: 'center',
   },
-  statDivider: {
-    width: 1,
-    height: 25,
-    backgroundColor: '#E0E0E0',
-  },
-  editNameContainer: {
-    marginBottom: 10,
-  },
-  editLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#555',
-    marginBottom: 5,
-  },
-  editNameInput: {
-    backgroundColor: '#F8F6FB',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E8E0FF',
-    padding: 10,
-    fontSize: 16,
-  },
-  actionButtonsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  editButton: {
-    width: '60%',
-  },
-  editButtonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 12,
-    padding: 12,
-    shadowColor: '#8e74ae',
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 6,
-  },
-  editButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 6,
-  },
-  editActionButtons: {
-    flexDirection: 'row',
-    width: '100%',
-    justifyContent: 'space-between',
-  },
-  cancelButton: {
-    width: '45%',
-    borderWidth: 1,
-    borderColor: '#8e74ae',
-    borderRadius: 12,
-    padding: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelButtonText: {
-    color: '#8e74ae',
-    fontSize: 16,
+  activeStatLabel: {
+    color: theme.colors.primary.main,
     fontWeight: '600',
   },
-  saveButton: {
-    width: '45%',
-  },
-  saveButtonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 12,
-    padding: 12,
-    shadowColor: '#8e74ae',
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 6,
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 6,
-  },
+  
+  // Detail Card
   detailsCard: {
-    backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: '#8e74ae',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    marginHorizontal: theme.spacing.md,
+    marginTop: theme.spacing.md,
+    backgroundColor: '#fff',
+    borderRadius: theme.border.radius.lg,
+    padding: theme.spacing.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  sectionHeaderContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.md,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#8e74ae',
-    marginBottom: 15,
+    fontWeight: '700',
+    color: theme.colors.text.primary,
+  },
+  editActionButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.primary.lighter,
   },
   detailsContainer: {
-    paddingHorizontal: 5,
+    marginBottom: theme.spacing.md,
   },
   detailRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 16,
-    paddingBottom: 12,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: theme.spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0eaf7',
+    borderBottomColor: theme.colors.neutral.grey100,
   },
   detailIconLabelContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    width: 100,
-    marginRight: 10,
   },
   detailLabel: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#666',
-    marginLeft: 10,
+    color: theme.colors.text.secondary,
+    marginLeft: theme.spacing.sm,
   },
   detailValue: {
-    flex: 1,
     fontSize: 15,
-    color: '#333',
-    flexWrap: 'wrap',
-    paddingRight: 5,
+    color: theme.colors.text.primary,
+    fontWeight: '500',
+    maxWidth: '60%',
+    textAlign: 'right',
   },
-  editDetailsContainer: {
-    marginTop: 5,
-  },
-  inputGroup: {
-    marginBottom: 16,
+  
+  // Form inputs
+  inputContainer: {
+    marginBottom: theme.spacing.md,
   },
   inputLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#555',
-    marginBottom: 8,
-    marginLeft: 2,
+    color: theme.colors.text.secondary,
+    marginBottom: 4,
   },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8F6FB',
-    borderRadius: 12,
+  input: {
     borderWidth: 1,
-    borderColor: '#E8E0FF',
-    shadowColor: '#8e74ae',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    borderColor: theme.colors.neutral.grey200,
+    backgroundColor: theme.colors.background.paper,
+    borderRadius: theme.border.radius.md,
+    padding: theme.spacing.sm,
+    fontSize: 16,
+    color: theme.colors.text.primary,
   },
   textAreaWrapper: {
     alignItems: 'flex-start',
   },
-  inputIcon: {
-    marginLeft: 15,
-    marginRight: 5,
-  },
-  input: {
-    flex: 1,
-    padding: 12,
-    fontSize: 16,
-    color: '#444',
-  },
   textArea: {
     height: 100,
     textAlignVertical: 'top',
-    paddingTop: 12,
   },
-  animalsSection: {
-    backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: '#8e74ae',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  sectionHeader: {
+  
+  // Buttons
+  formButtonsContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginTop: theme.spacing.md,
   },
-  refreshButton: {
-    padding: 8,
+  cancelButton: {
+    flex: 1,
+    marginRight: theme.spacing.sm,
     borderWidth: 1,
-    borderColor: '#8e74ae',
-    borderRadius: 8,
-  },
-  emptyStateContainer: {
-    alignItems: 'center',
-    padding: 20,
-  },
-  emptyStateText: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    marginTop: 10,
-    marginBottom: 15,
-  },
-  addAnimalButton: {
-    width: '70%',
-    marginTop: 10,
-  },
-  addAnimalButtonGradient: {
-    flexDirection: 'row',
+    borderColor: theme.colors.neutral.grey300,
+    borderRadius: theme.border.radius.md,
+    padding: theme.spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 12,
-    padding: 12,
-    shadowColor: '#8e74ae',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 4,
   },
-  addAnimalButtonText: {
-    color: '#fff',
+  cancelButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    marginLeft: 6,
+    color: theme.colors.text.secondary,
   },
-  animalsContainer: {
+  saveButton: {
+    flex: 1,
+    marginLeft: theme.spacing.sm,
+    backgroundColor: theme.colors.primary.main,
+    borderRadius: theme.border.radius.md,
+    padding: theme.spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: theme.colors.primary.dark,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  saveButtonGradient: {
+    width: '100%',
+    height: '100%',
+    borderRadius: theme.border.radius.md,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+  },
+  saveButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+    marginLeft: theme.spacing.xs,
+  },
+  
+  // Animals Section
+  animalsSection: {
+    marginHorizontal: theme.spacing.md,
+    marginTop: theme.spacing.md,
+    backgroundColor: '#fff',
+    borderRadius: theme.border.radius.lg,
+    padding: theme.spacing.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+    marginBottom: theme.spacing.md,
+  },
+  animalsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
   animalCard: {
     width: '48%',
-    backgroundColor: '#F8F6FB',
-    borderRadius: 12,
-    overflow: 'hidden',
-    marginBottom: 16,
-    shadowColor: '#8e74ae',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    marginBottom: 15,
+    borderRadius: theme.border.radius.md,
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
-    elevation: 3,
+    elevation: 2,
+    overflow: 'hidden',
   },
   animalImage: {
     width: '100%',
     height: 120,
-    backgroundColor: '#E8E0FF',
   },
   animalInfo: {
-    padding: 10,
+    padding: theme.spacing.sm,
   },
   animalName: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#8e74ae',
-    marginBottom: 4,
+    fontWeight: '700',
+    color: theme.colors.text.primary,
+    marginBottom: 2,
   },
   animalBreed: {
     fontSize: 12,
-    color: '#666',
+    color: theme.colors.text.secondary,
+    marginBottom: 4,
   },
-  logoutButton: {
+  addAnimalButton: {
+    borderRadius: theme.border.radius.md,
+    overflow: 'hidden',
+  },
+  addAnimalButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#8e74ae',
-    borderRadius: 12,
-    padding: 12,
-    marginTop: 10,
-    backgroundColor: 'rgba(142, 116, 174, 0.05)',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
   },
-  logoutButtonText: {
-    marginLeft: 8,
-    fontSize: 16,
+  addAnimalButtonText: {
+    fontSize: 14,
     fontWeight: '600',
-    color: '#8e74ae',
-  },
-  debugButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#8e74ae',
-    borderRadius: 12,
-    padding: 12,
-    marginTop: 10,
-    backgroundColor: 'rgba(142, 116, 174, 0.05)',
-  },
-  debugButtonText: {
-    marginLeft: 8,
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#8e74ae',
+    color: '#fff',
+    marginLeft: 4,
   },
   
-  // Application Button Styles
-  applicationButton: {
-    alignSelf: 'center',
-    marginVertical: 20,
-    borderRadius: 25,
-    overflow: 'hidden',
-    elevation: 3,
-    shadowColor: '#8e74ae',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
+  // Empty state
+  emptyStateContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: theme.spacing.lg,
   },
-  applicationButtonGradient: {
+  emptyStateText: {
+    textAlign: 'center',
+    fontSize: 16,
+    color: theme.colors.text.secondary,
+    marginTop: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+  },
+  
+  // Sign Out Button
+  profileActionsContainer: {
+    marginTop: theme.spacing.md,
+  },
+  signOutButton: {
+    width: '100%',
+    height: 50,
+    borderRadius: theme.border.radius.md,
+    overflow: 'hidden',
+  },
+  signOutButtonGradient: {
+    width: '100%',
+    height: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
   },
-  applicationButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
+  signOutButtonText: {
     fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
     marginLeft: 8,
+  },
+  
+  // Debug button
+  debugButton: {
+    marginTop: theme.spacing.md,
+    padding: theme.spacing.sm,
+    borderRadius: theme.border.radius.md,
+    backgroundColor: theme.colors.neutral.grey200,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.neutral.grey300,
+  },
+  debugButtonText: {
+    fontSize: 14,
+    color: theme.colors.text.secondary,
   },
 });
 &nbsp;
@@ -1402,7 +1384,7 @@ export default styles; </pre></td></tr></table></pre>
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-03-02T23:02:27.611Z
+                at 2025-03-03T21:37:34.303Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

@@ -25,14 +25,14 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/96</span>
+                <span class='fraction'>0/90</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/30</span>
+                <span class='fraction'>0/38</span>
             </div>
         
             
@@ -46,7 +46,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/86</span>
+                <span class='fraction'>0/80</span>
             </div>
         
             
@@ -294,22 +294,8 @@
 <a name='L229'></a><a href='#L229'>229</a>
 <a name='L230'></a><a href='#L230'>230</a>
 <a name='L231'></a><a href='#L231'>231</a>
-<a name='L232'></a><a href='#L232'>232</a>
-<a name='L233'></a><a href='#L233'>233</a>
-<a name='L234'></a><a href='#L234'>234</a>
-<a name='L235'></a><a href='#L235'>235</a>
-<a name='L236'></a><a href='#L236'>236</a>
-<a name='L237'></a><a href='#L237'>237</a>
-<a name='L238'></a><a href='#L238'>238</a>
-<a name='L239'></a><a href='#L239'>239</a>
-<a name='L240'></a><a href='#L240'>240</a>
-<a name='L241'></a><a href='#L241'>241</a>
-<a name='L242'></a><a href='#L242'>242</a>
-<a name='L243'></a><a href='#L243'>243</a>
-<a name='L244'></a><a href='#L244'>244</a>
-<a name='L245'></a><a href='#L245'>245</a>
-<a name='L246'></a><a href='#L246'>246</a>
-<a name='L247'></a><a href='#L247'>247</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L232'></a><a href='#L232'>232</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -331,23 +317,15 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -408,23 +386,15 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -560,6 +530,7 @@ import { Alert } from 'react-native';
 import { decode } from 'base64-arraybuffer';
 import supabase from '../config/supabase';
 import { useAuth } from '../context/AuthContext';
+import StorageService from '../services/storageService';
 &nbsp;
 /**
  * Hook to create a new animal
@@ -577,23 +548,15 @@ export const useCreateAnimal = <span class="cstat-no" title="statement not cover
         let imageUrl = <span class="cstat-no" title="statement not covered" >null;</span>
         
 <span class="cstat-no" title="statement not covered" >        if (imageData?.base64) {</span>
+          // Use StorageService to upload the image
           const fileName = <span class="cstat-no" title="statement not covered" >`animal_${Date.now()}.jpg`;</span>
-          const contentType = <span class="cstat-no" title="statement not covered" >'image/jpeg';</span>
-          const base64FileData = <span class="cstat-no" title="statement not covered" >imageData.base64;</span>
+          const { success, publicUrl, error: uploadError } = <span class="cstat-no" title="statement not covered" >await StorageService.uploadBase64Image(</span>
+            imageData.base64,
+            'animals', // Use the 'animals' bucket which is known to exist
+            fileName
+          );
           
-          const { data: uploadData, error: uploadError } = <span class="cstat-no" title="statement not covered" >await supabase.storage</span>
-            .from('animal_images')
-            .upload(fileName, decode(base64FileData), {
-              contentType,
-              upsert: true,
-            });
-          
-<span class="cstat-no" title="statement not covered" >          if (uploadError) <span class="cstat-no" title="statement not covered" >throw uploadError;</span></span>
-          
-          // Get public URL
-          const { data: { publicUrl } } = <span class="cstat-no" title="statement not covered" >supabase.storage</span>
-            .from('animal_images')
-            .getPublicUrl(fileName);
+<span class="cstat-no" title="statement not covered" >          if (!success || uploadError) <span class="cstat-no" title="statement not covered" >throw uploadError || new Error('Failed to upload image');</span></span>
           
 <span class="cstat-no" title="statement not covered" >          imageUrl = publicUrl;</span>
         }
@@ -654,23 +617,15 @@ export const useUpdateAnimal = <span class="cstat-no" title="statement not cover
         let imageUrl = <span class="cstat-no" title="statement not covered" >animalData.image_url;</span>
         
 <span class="cstat-no" title="statement not covered" >        if (imageData?.base64) {</span>
+          // Use StorageService to upload the image
           const fileName = <span class="cstat-no" title="statement not covered" >`animal_${animalId}_${Date.now()}.jpg`;</span>
-          const contentType = <span class="cstat-no" title="statement not covered" >'image/jpeg';</span>
-          const base64FileData = <span class="cstat-no" title="statement not covered" >imageData.base64;</span>
+          const { success, publicUrl, error: uploadError } = <span class="cstat-no" title="statement not covered" >await StorageService.uploadBase64Image(</span>
+            imageData.base64,
+            'animals', // Use the 'animals' bucket which is known to exist
+            fileName
+          );
           
-          const { data: uploadData, error: uploadError } = <span class="cstat-no" title="statement not covered" >await supabase.storage</span>
-            .from('animal_images')
-            .upload(fileName, decode(base64FileData), {
-              contentType,
-              upsert: true,
-            });
-          
-<span class="cstat-no" title="statement not covered" >          if (uploadError) <span class="cstat-no" title="statement not covered" >throw uploadError;</span></span>
-          
-          // Get public URL
-          const { data: { publicUrl } } = <span class="cstat-no" title="statement not covered" >supabase.storage</span>
-            .from('animal_images')
-            .getPublicUrl(fileName);
+<span class="cstat-no" title="statement not covered" >          if (!success || uploadError) <span class="cstat-no" title="statement not covered" >throw uploadError || new Error('Failed to upload image');</span></span>
           
 <span class="cstat-no" title="statement not covered" >          imageUrl = publicUrl;</span>
         }
@@ -808,7 +763,7 @@ export const useAdoptAnimal = <span class="cstat-no" title="statement not covere
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-03-02T23:02:27.611Z
+                at 2025-03-03T21:37:34.303Z
             </div>
         <script src="../prettify.js"></script>
         <script>
