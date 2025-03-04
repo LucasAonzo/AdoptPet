@@ -28,8 +28,6 @@ export type AuthStackParamList = {
 export type MainTabParamList = {
   Home: undefined;
   Search: undefined;
-  Favorites: undefined;
-  Messages: undefined;
   Profile: undefined;
 };
 
@@ -39,10 +37,6 @@ export type MainTabParamList = {
 export type HomeStackParamList = {
   HomeScreen: undefined;
   AnimalDetail: { animalId: string };
-  UserProfile: { userId: string };
-  AdoptionApplication: { animalId: string };
-  AdoptionSuccess: { animal: Animal };
-  PublicationSuccess: { animal: Animal };
 };
 
 /**
@@ -51,10 +45,9 @@ export type HomeStackParamList = {
 export type ProfileStackParamList = {
   ProfileScreen: undefined;
   EditProfile: undefined;
-  MyPets: undefined;
-  AdoptionApplications: undefined;
-  ApplicationDetail: { applicationId: string };
   Settings: undefined;
+  MyAnimals: undefined;
+  Favorites: undefined;
 };
 
 /**
@@ -85,6 +78,14 @@ export type MessagesStackParamList = {
 };
 
 /**
+ * Add Stack Navigator param list
+ */
+export type AddStackParamList = {
+  AddAnimal: undefined;
+  PublicationSuccess: { animal: any };
+};
+
+/**
  * Combined Navigator Param List
  */
 export type AppNavigatorParamList = 
@@ -94,4 +95,5 @@ export type AppNavigatorParamList =
   HomeStackParamList & 
   ProfileStackParamList &
   SearchStackParamList &
-  MessagesStackParamList; 
+  MessagesStackParamList &
+  AddStackParamList; 

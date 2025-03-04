@@ -15,8 +15,8 @@ export { default as AnimatedScreenTransition } from './AnimatedScreenTransition'
 // -- UI Components --
 export { default as GradientWrapper } from './GradientWrapper';
 export { default as CustomGradient } from './CustomGradient';
+export { default as OptimizedImage } from './OptimizedImage';
 
 export {
-  ErrorBoundary,
-  OptimizedImage
+  ErrorBoundary
 }; 

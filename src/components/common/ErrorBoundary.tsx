@@ -1,5 +1,5 @@
-import React, { ErrorInfo as ReactErrorInfo, ReactNode } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform } from 'react-native';
+import React, { Component, ReactNode, ErrorInfo } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform, ViewStyle, TextStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { logErrorToFile, flushMemoryLogs, addBreadcrumb } from '../../utils/debugUtils';
 
@@ -29,7 +29,7 @@ interface ErrorBoundaryState {
   /**
    * Additional error information including component stack
    */
-  errorInfo: ReactErrorInfo | null;
+  errorInfo: ErrorInfo | null;
   
   /**
    * Whether to show detailed error information
@@ -37,11 +37,24 @@ interface ErrorBoundaryState {
   showDetails: boolean;
 }
 
+interface StylesType {
+  container: ViewStyle;
+  title: TextStyle;
+  message: TextStyle;
+  detailsToggle: ViewStyle;
+  detailsToggleText: TextStyle;
+  errorDetails: ViewStyle;
+  errorText: TextStyle;
+  stackText: TextStyle;
+  button: ViewStyle;
+  buttonText: TextStyle;
+}
+
 /**
  * Error boundary component that catches JavaScript errors in its child component tree,
  * logs those errors, and displays a fallback UI instead of the component tree that crashed.
  */
-class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { 
@@ -57,7 +70,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: ReactErrorInfo): void {
+  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     this.setState({ errorInfo });
     
     // Add a breadcrumb for the error
@@ -145,7 +158,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 }
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create<StylesType>({
   container: {
     flex: 1,
     justifyContent: 'center',

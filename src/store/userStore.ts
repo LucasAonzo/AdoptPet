@@ -1,10 +1,20 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { User } from '../types/user';
+
+// Define the User interface
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  address?: string;
+  created_at?: string;
+  [key: string]: any; // For any additional properties
+}
 
 /**
- * Interface for the user store state
+ * Define the store state interface
  */
 interface UserState {
   user: User | null;

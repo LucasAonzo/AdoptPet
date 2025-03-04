@@ -169,21 +169,21 @@ const AddStackScreen: React.FC<StackScreenProps> = ({ navigation }) => {
         gestureEnabled: false,
       }}
     >
-      <AddStack.Screen 
-        name="AddMain" 
-        component={AddAnimalScreen} 
-        options={({ route }) => ({ 
-          title: route.params?.editMode ? 'Edit Animal' : 'Add Animal',
+      <AddStack.Screen
+        name="AddMain"
+        component={AddAnimalScreen}
+        options={({ route }) => ({
+          title: route.params && 'editMode' in route.params && route.params.editMode ? 'Edit Animal' : 'Add Animal',
           // Add custom back button that goes to Home
           headerLeft: () => (
-            <Ionicons 
-              name="arrow-back" 
-              size={24} 
-              color="#fff" 
+            <Ionicons
+              name="arrow-back"
+              size={24}
+              color="#fff"
               style={{ marginLeft: 15 }}
               onPress={() => navigation.navigate('Home')}
             />
-          )
+          ),
         })}
       />
       <AddStack.Screen

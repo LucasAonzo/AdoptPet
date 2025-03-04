@@ -3,14 +3,17 @@ import { createClient, SupabaseClient, User } from '@supabase/supabase-js';
 const SUPABASE_URL = 'https://your-supabase-url.supabase.co';
 const SUPABASE_ANON_KEY = 'your-anon-key';
 
-// Create a strongly typed Supabase client
+/**
+ * Supabase client instance for the application
+ */
 export const supabase: SupabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /**
  * Checks if a user is currently logged in
- * @returns The currently logged in user or null if no user is logged in
+ * @returns The current user or null if not logged in
  */
 export const checkUserLoggedIn = async (): Promise<User | null> => {
+  // Using the newer Supabase Auth API
   const { data, error } = await supabase.auth.getUser();
   if (error) {
     console.error('Error getting user:', error);
@@ -20,8 +23,8 @@ export const checkUserLoggedIn = async (): Promise<User | null> => {
 };
 
 /**
- * Logs out the currently authenticated user
- * @returns A promise that resolves when the logout process is complete
+ * Logs out the current user
+ * @returns A promise that resolves when the user is logged out
  */
 export const logOutUser = async (): Promise<void> => {
   const { error } = await supabase.auth.signOut();

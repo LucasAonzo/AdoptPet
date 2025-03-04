@@ -3,25 +3,25 @@ import { User } from '../types/user';
 import { Provider } from '@supabase/supabase-js';
 
 /**
- * Interface for authentication response
+ * Interface for user data passed during registration
  */
-interface AuthResponse {
-  success: boolean;
-  user?: User;
-  session?: any;
-  error?: Error;
-  warning?: string;
-  data?: any;
-}
-
-/**
- * Interface for user data during registration
- */
-interface UserData {
+export interface UserData {
   name?: string;
   profile_picture?: string;
   bio?: string;
   [key: string]: any;
+}
+
+/**
+ * Interface for authentication response
+ */
+export interface AuthResponse {
+  success: boolean;
+  user?: any;
+  session?: any;
+  error?: any;
+  warning?: string;
+  data?: any;
 }
 
 /**
@@ -30,10 +30,10 @@ interface UserData {
 const AuthService = {
   /**
    * Sign up a new user
-   * @param email - User's email
-   * @param password - User's password
-   * @param userData - Additional user data
-   * @returns Result of the signup operation
+   * @param {string} email - User's email
+   * @param {string} password - User's password
+   * @param {UserData} userData - Additional user data
+   * @returns {Promise<AuthResponse>} - Result of the signup operation
    */
   signUp: async (email: string, password: string, userData: UserData): Promise<AuthResponse> => {
     try {
